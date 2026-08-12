@@ -11,10 +11,7 @@ import { DashboardCard } from "@/components/dashboard/DashboardCard";
 import { QuickActionCard } from "@/components/dashboard/QuickActionCard";
 import { Heatmap } from "@/components/dashboard/Heatmap";
 import { ProfileCompletion } from "@/components/profile/ProfileCompletion";
-import {
-  RecommendedTeammates,
-  getMockTeammates,
-} from "@/components/dashboard/RecommendedTeammates";
+import { RecommendedTeammates } from "@/components/dashboard/RecommendedTeammates";
 import { RecentProjects } from "@/components/dashboard/RecentProjects";
 import { NotificationsPreview } from "@/components/dashboard/NotificationsPreview";
 import { ActivityTimeline } from "@/components/dashboard/ActivityTimeline";
@@ -82,7 +79,6 @@ export default function DashboardPage() {
     connections: 0,
   };
   const completion = dashboardData?.profileCompletion ?? profile.profileCompletion ?? 0;
-  const mockTeammates = getMockTeammates();
 
   return (
     <div className="space-y-6">
@@ -209,7 +205,7 @@ export default function DashboardPage() {
             icon={<Sparkles className="h-4 w-4" />}
             delay={0.5}
           >
-            <RecommendedTeammates teammates={mockTeammates} />
+            <RecommendedTeammates />
           </DashboardCard>
 
           {/* Notifications */}

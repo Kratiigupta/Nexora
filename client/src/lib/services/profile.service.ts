@@ -126,4 +126,12 @@ export const profileService = {
     const response = await api.get("/dashboard");
     return response.data.data;
   },
+
+  /**
+   * GET /api/v1/dashboard/recommended-teammates
+   */
+  async getRecommendedTeammates(): Promise<import("@/types/dashboard").TeammateRecommendation[]> {
+    const response = await api.get("/dashboard/recommended-teammates");
+    return response.data.data;
+  },
 };

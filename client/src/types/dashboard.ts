@@ -41,8 +41,7 @@ export interface ActivityLogEntry {
 export type HeatmapData = Record<string, number>;
 
 /**
- * Teammate recommendation — mock data structure.
- * Isolated interface for Phase 4 AI recommendation engine replacement.
+ * Teammate recommendation — AI engine recommendation payload.
  */
 export interface TeammateRecommendation {
   id: string;
@@ -50,9 +49,11 @@ export interface TeammateRecommendation {
   username: string;
   avatarUrl: string | null;
   department: string;
+  year: number;
   bio: string | null;
   skills: string[];
-  matchScore: number; // 0–100 compatibility score
+  score: number;
+  matchReasons: string[];
 }
 
 export interface DashboardData {

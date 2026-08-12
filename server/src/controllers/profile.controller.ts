@@ -478,3 +478,115 @@ export const getDashboard = async (
     next(error);
   }
 };
+
+/**
+ * GET /api/v1/dashboard/recommended-teammates
+ * Returns recommended teammates for the authenticated user based on a deterministic scoring algorithm.
+ */
+export const getRecommendedTeammates = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const userId = req.user!.id;
+
+    // Fetch current user's profile and skills
+    const currentUser = await prisma.profile.findUnique({
+      where: { id: userId },
+      include: { skills: true },
+    });
+
+    if (!currentUser) {
+      throw ApiError.notFound("Profile");
+    }
+
+    const userSkillIds = currentUser.skills.map((s) => s.skillId);
+
+    // Build efficient OR conditions to only fetch potentially relevant candidates
+    const orConditions: any[] = [];
+    if (currentUser.department) orConditions.push({ department: currentUser.department });
+    if (currentUser.year) orConditions.push({ year: currentUser.year });
+    if (currentUser.interests && currentUser.interests.length > 0) {
+      orConditions.push({ interests: { hasSome: currentUser.interests } });
+    }
+    if (userSkillIds.length > 0) {
+      orConditions.push({ skills: { some: { skillId: { in: userSkillIds } } } });
+    }
+
+    const whereClause: any = {
+      id: { not: userId },
+      isAvailable: true,
+    };
+
+    if (orConditions.length > 0) {
+      whereClause.OR = orConditions;
+    }
+
+    // Fetch eligible candidates (bound to 100 to prevent loading the entire DB)
+    const candidates = await prisma.profile.findMany({
+      where: whereClause,
+      include: {
+        skills: { include: { skill: true } }
+      },
+      take: 100
+    });
+
+    // Score candidates deterministically
+    const scoredCandidates = candidates.map(candidate => {
+      let score = 0;
+      const matchReasons: string[] = [];
+
+      // 1. Shared skills: +15 per skill, max 45
+      const candidateSkillIds = candidate.skills.map(s => s.skillId);
+      const sharedSkills = candidateSkillIds.filter(id => userSkillIds.includes(id));
+      if (sharedSkills.length > 0) {
+        const points = Math.min(sharedSkills.length * 15, 45);
+        score += points;
+        matchReasons.push(`${sharedSkills.length} shared skill${sharedSkills.length > 1 ? 's' : ''}`);
+      }
+
+      // 2. Same department: +20
+      if (candidate.department === currentUser.department) {
+        score += 20;
+        matchReasons.push("Same department");
+      }
+
+      // 3. Shared interests: +10 per interest, max 20
+      const uniqueCandidateInterests = Array.from(new Set(candidate.interests));
+      const sharedInterests = uniqueCandidateInterests.filter(i => currentUser.interests.includes(i));
+      if (sharedInterests.length > 0) {
+        const points = Math.min(sharedInterests.length * 10, 20);
+        score += points;
+        matchReasons.push(`${sharedInterests.length} shared interest${sharedInterests.length > 1 ? 's' : ''}`);
+      }
+
+      // 4. Same academic year: +15
+      if (candidate.year === currentUser.year) {
+        score += 15;
+        matchReasons.push("Same academic year");
+      }
+
+      return {
+        id: candidate.id,
+        fullName: candidate.fullName,
+        username: candidate.username,
+        avatarUrl: candidate.avatarUrl,
+        department: candidate.department,
+        year: candidate.year,
+        bio: candidate.bio,
+        skills: candidate.skills.map(s => s.skill.name), // Format skills as strings for UI
+        score,
+        matchReasons
+      };
+    });
+
+    // Sort descending by score
+    scoredCandidates.sort((a, b) => b.score - a.score);
+
+    // Return top 5
+    sendSuccess(res, scoredCandidates.slice(0, 5));
+  } catch (error) {
+    next(error);
+  }
+};
