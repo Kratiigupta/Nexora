@@ -32,7 +32,7 @@ export const validate = (schemas: {
       next();
     } catch (error: any) {
       if (error instanceof ZodError) {
-        const details = (error as any).errors.map((err: any) => ({
+        const details = (error as any).issues.map((err: any) => ({
           field: err.path.join("."),
           message: err.message,
         }));

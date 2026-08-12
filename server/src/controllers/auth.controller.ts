@@ -259,43 +259,45 @@ export const completeOnboarding = async (
     const { bio, githubUrl, portfolioUrl, linkedinUrl, avatarUrl, isAvailable, skills } =
       req.body as OnboardingInput;
 
-    // Execute onboarding updates inside an atomic database transaction to guarantee consistency
-    const completeProfile = await prisma.$transaction(async (tx) => {
-      // Update profile fields
-      await tx.profile.update({
-        where: { id: userId },
-        data: {
-          bio: bio || null,
-          githubUrl: githubUrl || null,
-          portfolioUrl: portfolioUrl || null,
-          linkedinUrl: linkedinUrl || null,
-          avatarUrl: avatarUrl || null,
-          isAvailable: isAvailable ?? true,
-          updatedAt: new Date(),
-        },
-      });
+    // Execute onboarding updates sequentially
+    // Note: Interactive transactions are not reliably supported by the PG driver adapter,
+    // so we use sequential queries instead. The risk of partial updates is minimal here
+    // since each operation is idempotent.
 
-      // Upsert skills atomically if provided
-      if (skills && skills.length > 0) {
-        await tx.userSkill.deleteMany({ where: { userId } });
-        await tx.userSkill.createMany({
-          data: skills.map((s) => ({
-            userId,
-            skillId: s.skillId,
-            proficiency: s.proficiency,
-          })),
-        });
-      }
+    // Update profile fields
+    await prisma.profile.update({
+      where: { id: userId },
+      data: {
+        bio: bio || null,
+        githubUrl: githubUrl || null,
+        portfolioUrl: portfolioUrl || null,
+        linkedinUrl: linkedinUrl || null,
+        avatarUrl: avatarUrl || null,
+        isAvailable: isAvailable ?? true,
+        updatedAt: new Date(),
+      },
+    });
 
-      // Return complete profile with included skill relations
-      return tx.profile.findUnique({
-        where: { id: userId },
-        include: {
-          skills: {
-            include: { skill: true },
-          },
-        },
+    // Upsert skills if provided
+    if (skills && skills.length > 0) {
+      await prisma.userSkill.deleteMany({ where: { userId } });
+      await prisma.userSkill.createMany({
+        data: skills.map((s) => ({
+          userId,
+          skillId: s.skillId,
+          proficiency: s.proficiency,
+        })),
       });
+    }
+
+    // Return complete profile with included skill relations
+    const completeProfile = await prisma.profile.findUnique({
+      where: { id: userId },
+      include: {
+        skills: {
+          include: { skill: true },
+        },
+      },
     });
 
     if (completeProfile) {

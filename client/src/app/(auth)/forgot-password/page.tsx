@@ -93,7 +93,7 @@ export default function ForgotPasswordPage() {
       title="Forgot your password?"
       description="Enter your email and we'll send you a reset link"
     >
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" suppressHydrationWarning>
         <FormField
           id="forgot-email"
           label="Email"

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -24,14 +24,17 @@ export default function ResetPasswordPage() {
   const {
     register,
     handleSubmit,
-    watch,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<ResetPasswordFormValues>({
     resolver: zodResolver(resetPasswordSchema),
     defaultValues: { password: "", confirmPassword: "" },
   });
 
-  const password = watch("password");
+  const password = useWatch({
+    control,
+    name: "password",
+  });
 
   const onSubmit = async (data: ResetPasswordFormValues) => {
     try {
@@ -80,7 +83,7 @@ export default function ResetPasswordPage() {
       title="Reset your password"
       description="Choose a new password for your account"
     >
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" suppressHydrationWarning>
         <FormField
           id="reset-password"
           label="New Password"

@@ -28,6 +28,26 @@ enum Proficiency {
   expert
 }
 
+enum AvailabilityStatus {
+  available_for_team
+  looking_for_project
+  hiring
+  not_available
+}
+
+enum ActivityAction {
+  profile_updated
+  skill_added
+  skill_removed
+  team_joined
+  team_created
+  project_created
+  project_updated
+  task_completed
+  connection_made
+  session_completed
+}
+
 enum TeamType {
   project
   hackathon
@@ -127,21 +147,25 @@ enum ConnectionStatus {
 
 /// User profile — extends Supabase auth.users via matching UUID
 model Profile {
-  id           String   @id @default(uuid()) @db.Uuid
-  fullName     String   @map("full_name") @db.VarChar(100)
-  username     String   @unique @db.VarChar(50)
-  avatarUrl    String?  @map("avatar_url")
-  bio          String?
-  department   String   @db.VarChar(100)
-  year         Int      @db.SmallInt
-  college      String?  @db.VarChar(200)
-  githubUrl    String?  @map("github_url")
-  portfolioUrl String?  @map("portfolio_url")
-  linkedinUrl  String?  @map("linkedin_url")
-  role         UserRole @default(student)
-  isAvailable  Boolean  @default(true) @map("is_available")
-  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz()
-  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
+  id                 String             @id @default(uuid()) @db.Uuid
+  fullName           String             @map("full_name") @db.VarChar(100)
+  username           String             @unique @db.VarChar(50)
+  avatarUrl          String?            @map("avatar_url")
+  bio                String?
+  department         String             @db.VarChar(100)
+  year               Int                @db.SmallInt
+  college            String?            @db.VarChar(200)
+  githubUrl          String?            @map("github_url")
+  portfolioUrl       String?            @map("portfolio_url")
+  linkedinUrl        String?            @map("linkedin_url")
+  resumeUrl          String?            @map("resume_url")
+  interests          String[]           @default([])
+  role               UserRole           @default(student)
+  isAvailable        Boolean            @default(true) @map("is_available")
+  availabilityStatus AvailabilityStatus @default(available_for_team) @map("availability_status")
+  usernameChangedAt  DateTime?          @map("username_changed_at") @db.Timestamptz()
+  createdAt          DateTime           @default(now()) @map("created_at") @db.Timestamptz()
+  updatedAt          DateTime           @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
 
   // Relations
   skills                UserSkill[]
@@ -159,6 +183,7 @@ model Profile {
   notifications         Notification[]
   sentConnections       UserConnection[]       @relation("ConnectionRequester")
   receivedConnections   UserConnection[]       @relation("ConnectionReceiver")
+  activityLogs          ActivityLog[]
 
   @@index([role, isAvailable])
   @@index([department, year])
@@ -431,4 +456,19 @@ model UserConnection {
 
   @@unique([requesterId, receiverId])
   @@map("user_connections")
+}
+
+/// Activity log for tracking user actions (heatmap, timeline)
+model ActivityLog {
+  id          String         @id @default(uuid()) @db.Uuid
+  userId      String         @map("user_id") @db.Uuid
+  action      ActivityAction
+  description String?
+  metadata    Json?          @db.JsonB
+  createdAt   DateTime       @default(now()) @map("created_at") @db.Timestamptz()
+
+  user Profile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("activity_logs")
 }

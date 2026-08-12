@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -22,7 +22,7 @@ export default function RegisterPage() {
   const {
     register,
     handleSubmit,
-    watch,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
@@ -32,12 +32,15 @@ export default function RegisterPage() {
       password: "",
       confirmPassword: "",
       department: "",
-      year: 1,
+      year: undefined,
       college: "",
     },
   });
 
-  const password = watch("password");
+  const password = useWatch({
+    control,
+    name: "password",
+  });
 
   const onSubmit = async (data: RegisterFormValues) => {
     try {
@@ -83,7 +86,7 @@ export default function RegisterPage() {
       title="Create your account"
       description="Join Nexora and start collaborating with fellow students"
     >
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" suppressHydrationWarning>
         <FormField
           id="register-fullname"
           label="Full Name"

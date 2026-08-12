@@ -1,6 +1,7 @@
 import { Router } from "express";
 import authRoutes from "./auth.routes";
 import userRoutes from "./user.routes";
+import profileRoutes from "./profile.routes";
 import teamRoutes from "./team.routes";
 import projectRoutes from "./project.routes";
 import chatRoutes from "./chat.routes";
@@ -12,7 +13,9 @@ import uploadRoutes from "./upload.routes";
 import adminRoutes from "./admin.routes";
 import { authMiddleware } from "../middleware/auth";
 import { roleGuard } from "../middleware/roleGuard";
-import { aiRateLimiter, authRateLimiter } from "../middleware/rateLimiter";
+import { aiRateLimiter } from "../middleware/rateLimiter";
+import { getDashboard } from "../controllers/profile.controller";
+import { asyncHandler } from "../utils/asyncHandler";
 
 const router = Router();
 
@@ -27,10 +30,11 @@ const router = Router();
  */
 
 // Auth — rate-limited, mostly public
-router.use("/auth", authRateLimiter, authRoutes);
+router.use("/auth", authRoutes);
 
 // Protected routes — require authentication
 router.use("/users", authMiddleware, userRoutes);
+router.use("/profile", authMiddleware, profileRoutes);
 router.use("/teams", authMiddleware, teamRoutes);
 router.use("/projects", authMiddleware, projectRoutes);
 router.use("/chat", authMiddleware, chatRoutes);
@@ -38,6 +42,9 @@ router.use("/skill-exchange", authMiddleware, skillExchangeRoutes);
 router.use("/events", authMiddleware, eventRoutes);
 router.use("/notifications", authMiddleware, notificationRoutes);
 router.use("/upload", authMiddleware, uploadRoutes);
+
+// Dashboard — authenticated, standalone path
+router.get("/dashboard", authMiddleware, asyncHandler(getDashboard));
 
 // AI — rate-limited + authenticated
 router.use("/ai", authMiddleware, aiRateLimiter, aiRoutes);

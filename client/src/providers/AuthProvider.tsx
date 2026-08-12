@@ -3,6 +3,7 @@
 import { useEffect, useRef, ReactNode } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import type { Session, AuthChangeEvent } from "@supabase/supabase-js";
 import { useAuthStore } from "@/stores/authStore";
 import { authService } from "@/lib/services/auth.service";
 
@@ -80,7 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Subscribe to auth state changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
+    } = supabase.auth.onAuthStateChange(async (event: AuthChangeEvent, session: Session | null) => {
       if (!isMountedRef.current) return;
 
       if (event === "PASSWORD_RECOVERY") {

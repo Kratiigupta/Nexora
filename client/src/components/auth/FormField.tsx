@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { UseFormRegisterReturn } from "react-hook-form";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Eye, EyeOff, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -54,7 +53,7 @@ export function FormField({
           <Icon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
         )}
 
-        <Input
+        <input
           id={id}
           type={inputType}
           placeholder={placeholder}
@@ -62,8 +61,10 @@ export function FormField({
           autoComplete={autoComplete}
           aria-invalid={!!error}
           aria-describedby={error ? `${id}-error` : undefined}
+          suppressHydrationWarning
           className={cn(
-            "h-11 bg-background/50 border-border/60 transition-all duration-200",
+            "flex w-full rounded-md px-3 py-2 text-sm",
+            "h-11 bg-background/50 border border-border/60 transition-all duration-200 outline-none",
             "focus:border-primary/50 focus:bg-background/80 focus:ring-2 focus:ring-primary/20",
             "placeholder:text-muted-foreground/50",
             Icon && "pl-10",

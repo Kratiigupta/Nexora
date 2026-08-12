@@ -13,6 +13,7 @@ import {
   completeOnboarding,
 } from "../controllers/auth.controller";
 import { asyncHandler } from "../utils/asyncHandler";
+import { authRateLimiter } from "../middleware/rateLimiter";
 
 const router = Router();
 
@@ -25,7 +26,7 @@ const router = Router();
  */
 
 // Public — called immediately after Supabase signup
-router.post("/register", validate({ body: registerSchema.shape.body }), asyncHandler(register));
+router.post("/register", authRateLimiter, validate({ body: registerSchema.shape.body }), asyncHandler(register));
 
 // Protected — requires valid JWT
 router.get("/me", authMiddleware, asyncHandler(getMe));

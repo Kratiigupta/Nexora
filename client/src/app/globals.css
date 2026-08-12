@@ -232,10 +232,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Smooth scrolling */
-html {
-  scroll-behavior: smooth;
-}
+/* Smooth scrolling — handled via data-scroll-behavior="smooth" on <html> in layout.tsx */
 
 /* Custom scrollbar */
 ::-webkit-scrollbar {

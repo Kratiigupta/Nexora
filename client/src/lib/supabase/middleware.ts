@@ -6,19 +6,34 @@ import { NextResponse, type NextRequest } from "next/server";
  * Used in Next.js middleware to refresh auth sessions on every request.
  * Handles route protection and auth page redirects.
  */
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+if (
+  !supabaseUrl ||
+  !supabaseUrl.startsWith("https://") ||
+  supabaseUrl.includes("example.supabase.co")
+) {
+  console.error(
+    "⚠️  [Middleware] NEXT_PUBLIC_SUPABASE_URL is missing or set to a placeholder. Auth will not work."
+  );
+}
+
+if (!supabaseKey || supabaseKey.includes("dummy")) {
+  console.error(
+    "⚠️  [Middleware] NEXT_PUBLIC_SUPABASE_ANON_KEY is missing or set to a placeholder. Auth will not work."
+  );
+}
+
 export const updateSession = async (request: NextRequest) => {
   let supabaseResponse = NextResponse.next({
     request,
   });
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.startsWith("http")
-    ? process.env.NEXT_PUBLIC_SUPABASE_URL
-    : "https://example.supabase.co";
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "dummy-anon-key";
-
   const supabase = createServerClient(
-    supabaseUrl,
-    supabaseKey,
+    supabaseUrl || "https://placeholder.supabase.co",
+    supabaseKey || "placeholder-key",
     {
       cookies: {
         getAll() {
