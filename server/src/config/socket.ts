@@ -2,6 +2,7 @@ import { Server as HttpServer } from "http";
 import { Server, Socket } from "socket.io";
 import { env } from "./env";
 import { supabaseAdmin } from "./supabase";
+import { prisma } from "./prisma";
 
 let io: Server;
 
@@ -55,10 +56,45 @@ export const initializeSocket = (httpServer: HttpServer): Server => {
     // Join user's personal room for direct notifications
     socket.join(`user:${userId}`);
 
-    // Handle joining conversation rooms
-    socket.on("join_room", (roomId: string) => {
-      socket.join(roomId);
-      console.log(`📥 ${userId} joined room: ${roomId}`);
+    // Handle joining conversation rooms safely
+    socket.on("join_room", async (roomId: string) => {
+      try {
+        const conversation = await prisma.conversation.findUnique({
+          where: { id: roomId },
+          include: {
+            participants: true,
+            team: { include: { members: true } },
+            project: { include: { team: { include: { members: true } } } },
+          },
+        });
+
+        if (!conversation) {
+          socket.emit("error", { message: "Conversation not found" });
+          return;
+        }
+
+        let isAuthorized = false;
+
+        if (conversation.type === "direct") {
+          isAuthorized = conversation.participants.some((p) => p.userId === userId);
+        } else if (conversation.type === "team") {
+          isAuthorized = conversation.team?.members.some((m) => m.userId === userId) || false;
+        } else if (conversation.type === "project") {
+          isAuthorized =
+            conversation.project?.createdBy === userId ||
+            (conversation.project?.team?.members.some((m) => m.userId === userId) || false);
+        }
+
+        if (isAuthorized) {
+          socket.join(roomId);
+          console.log(`📥 ${userId} joined room: ${roomId}`);
+        } else {
+          socket.emit("error", { message: "Unauthorized to join this conversation" });
+        }
+      } catch (error) {
+        console.error(`Socket join_room error:`, error);
+        socket.emit("error", { message: "Failed to join room" });
+      }
     });
 
     // Handle leaving conversation rooms
