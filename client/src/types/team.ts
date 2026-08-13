@@ -19,6 +19,7 @@ export interface Team {
   members?: TeamMember[];
   requiredSkills?: TeamRequiredSkill[];
   creator?: Profile;
+  myRole?: "owner" | "admin" | "member";
 }
 
 export interface TeamMember {
@@ -43,4 +44,21 @@ export interface TeamRequiredSkill {
   teamId: string;
   skillId: string;
   skill?: { id: string; name: string; category: string };
+}
+
+export interface TeamInvitation {
+  requestId: string;
+  teamId: string;
+  teamName: string;
+  teamDescription: string | null;
+  teamAvatarUrl: string | null;
+  teamType: "project" | "hackathon" | "startup" | "research" | "competition";
+  inviter: {
+    id: string;
+    fullName: string;
+    username: string;
+    avatarUrl: string | null;
+  };
+  message: string | null;
+  createdAt: string;
 }
