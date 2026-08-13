@@ -17,7 +17,9 @@ import {
   Link2,
   UserPlus,
   MessageSquare,
+  ArrowLeftRight,
 } from "lucide-react";
+import { CreateSkillExchangeDialog } from "@/components/skill-exchange/CreateSkillExchangeDialog";
 
 /**
  * Public profile page — view another user's profile by username.
@@ -32,6 +34,7 @@ export default function PublicProfilePage() {
   const [profile, setProfile] = useState<PublicProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [requestMentor, setRequestMentor] = useState<string | null>(null);
 
   // If viewing own profile, redirect to /profile
   useEffect(() => {
@@ -95,7 +98,11 @@ export default function PublicProfilePage() {
       <ProfileHeader
         profile={profile}
         actions={
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            <Button variant="secondary" size="sm" className="gap-2 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white border-0" onClick={() => setRequestMentor(profile.username)}>
+              <ArrowLeftRight className="h-4 w-4" />
+              Request Mentorship
+            </Button>
             <Button variant="outline" size="sm" className="gap-2">
               <MessageSquare className="h-4 w-4" />
               Message
@@ -172,6 +179,13 @@ export default function PublicProfilePage() {
           )}
         </div>
       </div>
+
+      <CreateSkillExchangeDialog
+        open={!!requestMentor}
+        onOpenChange={(open) => !open && setRequestMentor(null)}
+        mentorUsername={requestMentor}
+        onSuccess={() => router.push("/skill-exchange")}
+      />
     </div>
   );
 }
