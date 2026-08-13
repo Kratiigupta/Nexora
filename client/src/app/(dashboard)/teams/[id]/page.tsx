@@ -7,6 +7,7 @@ import { ArrowLeft, Users, Shield, LogOut, UserMinus, ShieldAlert, MoreHorizonta
 import { toast } from "sonner";
 import { teamService } from "@/lib/services/team.service";
 import { InviteMemberDialog } from "@/components/team/InviteMemberDialog";
+import { CreateProjectDialog } from "@/components/project/CreateProjectDialog";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -168,37 +169,51 @@ export default function TeamDetailsPage() {
       </div>
 
       {/* Team Header */}
-      <div className="flex flex-col md:flex-row gap-6 md:items-start mb-10">
-        <Avatar className="h-24 w-24 border-2 rounded-xl shadow-sm">
-          <AvatarImage src={team.avatarUrl || undefined} />
-          <AvatarFallback className="rounded-xl text-3xl bg-primary/10 text-primary font-bold">
-            {team.name.substring(0, 2).toUpperCase()}
-          </AvatarFallback>
-        </Avatar>
-        
-        <div className="flex-1 space-y-3">
-          <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-4">
-            <h1 className="text-3xl font-bold tracking-tight">{team.name}</h1>
-            <div className="flex gap-2">
-              <Badge variant="secondary" className="capitalize text-xs font-medium">
-                {team.type}
-              </Badge>
-              <Badge variant="outline" className="text-xs">
-                {team.isPublic ? "Public" : "Private"}
-              </Badge>
+      <div className="flex flex-col md:flex-row gap-6 md:items-start mb-10 justify-between">
+        <div className="flex flex-col md:flex-row gap-6 md:items-start flex-1">
+          <Avatar className="h-24 w-24 border-2 rounded-xl shadow-sm">
+            <AvatarImage src={team.avatarUrl || undefined} />
+            <AvatarFallback className="rounded-xl text-3xl bg-primary/10 text-primary font-bold">
+              {team.name.substring(0, 2).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          
+          <div className="flex-1 space-y-3">
+            <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-4">
+              <h1 className="text-3xl font-bold tracking-tight">{team.name}</h1>
+              <div className="flex gap-2">
+                <Badge variant="secondary" className="capitalize text-xs font-medium">
+                  {team.type}
+                </Badge>
+                <Badge variant="outline" className="text-xs">
+                  {team.isPublic ? "Public" : "Private"}
+                </Badge>
+              </div>
+            </div>
+
+            <p className="text-muted-foreground leading-relaxed text-base max-w-3xl">
+              {team.description || "No description provided for this team."}
+            </p>
+
+            <div className="flex items-center text-sm text-muted-foreground pt-1">
+              <Users className="h-4 w-4 mr-2 opacity-70" />
+              <span className="font-medium text-foreground mr-1">{team.members?.length || 1}</span> of {team.maxMembers} members
+              <span className="mx-3">•</span>
+              Created {new Date(team.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
             </div>
           </div>
-          
-          <p className="text-muted-foreground leading-relaxed text-base max-w-3xl">
-            {team.description || "No description provided for this team."}
-          </p>
-          
-          <div className="flex items-center text-sm text-muted-foreground pt-1">
-            <Users className="h-4 w-4 mr-2 opacity-70" />
-            <span className="font-medium text-foreground mr-1">{team.members?.length || 1}</span> of {team.maxMembers} members
-            <span className="mx-3">•</span>
-            Created {new Date(team.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-          </div>
+        </div>
+
+        <div className="flex flex-col gap-2 shrink-0 md:items-end">
+          <CreateProjectDialog
+            defaultTeamId={team.id}
+            onSuccess={(p) => {
+              router.push(`/projects/${p.id}`);
+            }}
+          />
+          <Button variant="outline" onClick={() => router.push("/projects")} className="w-full">
+            View Projects
+          </Button>
         </div>
       </div>
 

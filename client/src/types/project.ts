@@ -16,7 +16,15 @@ export interface Project {
   createdAt: string;
   updatedAt: string;
   creator?: Profile;
+  team?: {
+    id: string;
+    name: string;
+    avatarUrl: string | null;
+  };
   tasks?: ProjectTask[];
+  _count?: {
+    tasks: number;
+  };
 }
 
 export interface ProjectTask {
