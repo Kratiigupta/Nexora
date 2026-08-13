@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Users, Shield, LogOut, UserMinus, ShieldAlert, MoreHorizontal, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Users, Shield, LogOut, UserMinus, ShieldAlert, MoreHorizontal, AlertTriangle, MessageSquare } from "lucide-react";
 
 import { toast } from "sonner";
 import { teamService } from "@/lib/services/team.service";
@@ -156,16 +156,37 @@ export default function TeamDetailsPage() {
           Back to Teams
         </Button>
 
-        {currentUserRole && !isOwner && (
-          <Button 
-            variant="outline" 
-            className="text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive gap-2"
-            onClick={() => setIsLeaveDialogOpen(true)}
-          >
-            <LogOut className="h-4 w-4" />
-            Leave Team
-          </Button>
-        )}
+        <div className="flex gap-2">
+          {currentUserRole && (
+            <Button
+              variant="default"
+              className="gap-2"
+              onClick={async () => {
+                try {
+                  const { chatService } = await import("@/lib/services/chat.service");
+                  const conv = await chatService.createConversation({ type: "team", teamId });
+                  router.push(`/messages?conversation=${conv.id}`);
+                } catch (err: any) {
+                  toast.error(err.response?.data?.message || "Failed to open team chat");
+                }
+              }}
+            >
+              <MessageSquare className="h-4 w-4" />
+              Open Team Chat
+            </Button>
+          )}
+
+          {currentUserRole && !isOwner && (
+            <Button
+              variant="outline"
+              className="text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive gap-2"
+              onClick={() => setIsLeaveDialogOpen(true)}
+            >
+              <LogOut className="h-4 w-4" />
+              Leave Team
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Team Header */}

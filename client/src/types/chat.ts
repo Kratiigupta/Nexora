@@ -11,6 +11,16 @@ export interface Conversation {
   projectId: string | null;
   createdAt: string;
   participants?: ConversationParticipant[];
+  team?: {
+    id: string;
+    name: string;
+    avatarUrl: string | null;
+  };
+  project?: {
+    id: string;
+    title: string;
+  };
+  messages?: Message[]; // Used when fetching list of conversations (latest message)
   lastMessage?: Message;
 }
 
@@ -32,4 +42,27 @@ export interface Message {
   isEdited: boolean;
   createdAt: string;
   sender?: Profile;
+}
+
+export interface PaginatedMessages {
+  messages: Message[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    hasMore: boolean;
+  };
+}
+
+export interface SendMessagePayload {
+  content: string;
+  type?: "text" | "image" | "file" | "system";
+  fileUrl?: string;
+}
+
+export interface CreateConversationPayload {
+  type: "direct" | "team" | "project";
+  participantId?: string;
+  teamId?: string;
+  projectId?: string;
 }

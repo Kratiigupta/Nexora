@@ -2,7 +2,7 @@
 
 import { useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
-import { FolderKanban, Users, GitBranch, ExternalLink, Trash2, ArrowLeft } from "lucide-react";
+import { FolderKanban, Users, GitBranch, ExternalLink, Trash2, ArrowLeft, MessageSquare } from "lucide-react";
 import Link from "next/link";
 import { projectService } from "@/lib/services/project.service";
 import type { Project, ProjectTask } from "@/types/project";
@@ -226,15 +226,35 @@ export default function ProjectWorkspacePage({ params }: { params: Promise<{ id:
             </div>
           </div>
           
-          {canManageProject && (
-            <div className="flex items-center gap-2 shrink-0">
-              <EditProjectDialog project={project} onSuccess={(p) => setProject(prev => prev ? {...prev, ...p} : null)} />
-              <Button variant="destructive" size="sm" onClick={handleDeleteProject} disabled={isDeleting} className="gap-2">
-                <Trash2 className="h-4 w-4" />
-                <span className="hidden sm:inline">Delete</span>
-              </Button>
-            </div>
-          )}
+          <div className="flex items-center gap-2 shrink-0">
+            <Button
+              variant="secondary"
+              size="sm"
+              className="gap-2"
+              onClick={async () => {
+                try {
+                  const { chatService } = await import("@/lib/services/chat.service");
+                  const conv = await chatService.createConversation({ type: "project", projectId: project.id });
+                  router.push(`/messages?conversation=${conv.id}`);
+                } catch (err: any) {
+                  toast.error(err.response?.data?.message || "Failed to open project chat");
+                }
+              }}
+            >
+              <MessageSquare className="h-4 w-4" />
+              <span className="hidden sm:inline">Chat</span>
+            </Button>
+
+            {canManageProject && (
+              <>
+                <EditProjectDialog project={project} onSuccess={(p) => setProject(prev => prev ? {...prev, ...p} : null)} />
+                <Button variant="destructive" size="sm" onClick={handleDeleteProject} disabled={isDeleting} className="gap-2">
+                  <Trash2 className="h-4 w-4" />
+                  <span className="hidden sm:inline">Delete</span>
+                </Button>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
