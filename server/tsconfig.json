@@ -14,16 +14,11 @@
     "declarationMap": true,
     "sourceMap": true,
     "moduleResolution": "node16",
-    "ignoreDeprecations": "6.0",
     "allowUnusedLabels": false,
     "allowUnreachableCode": false,
     "noFallthroughCasesInSwitch": true,
     "noImplicitReturns": true,
-    "noUncheckedIndexedAccess": true,
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["./src/*"]
-    }
+    "noUncheckedIndexedAccess": true
   },
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "dist"]
