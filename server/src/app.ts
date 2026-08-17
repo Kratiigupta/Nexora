@@ -119,7 +119,7 @@ initializeSocket(httpServer);
 // ──────────────────────────────────────────
 // 7. Start Server
 // ──────────────────────────────────────────
-httpServer.listen(env.PORT, () => {
+httpServer.listen(env.PORT, "0.0.0.0", () => {
   logger.info(`🚀 Nexora API Server running on port ${env.PORT}`);
   logger.info(`📍 Environment: ${env.NODE_ENV}`);
   logger.info(`🌐 Client URL: ${env.CLIENT_URL}`);
