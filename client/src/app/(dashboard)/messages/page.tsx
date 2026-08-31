@@ -35,7 +35,7 @@ function MessagesContent() {
     try {
       const data = await chatService.getConversations();
       setConversations(data);
-    } catch (error) {
+    } catch {
       toast.error("Failed to load conversations");
     } finally {
       setIsLoading(false);
@@ -44,7 +44,7 @@ function MessagesContent() {
 
   useEffect(() => {
     if (profile?.id) {
-      loadConversations();
+      void Promise.resolve().then(() => loadConversations());
     }
   }, [profile?.id, loadConversations]);
 

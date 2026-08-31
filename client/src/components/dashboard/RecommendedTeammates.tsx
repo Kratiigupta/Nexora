@@ -35,7 +35,7 @@ export function RecommendedTeammates({ className }: RecommendedTeammatesProps) {
   };
 
   useEffect(() => {
-    fetchRecommendations();
+    void Promise.resolve().then(() => fetchRecommendations());
   }, []);
 
   if (isLoading) {

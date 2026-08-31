@@ -24,7 +24,7 @@ export function ChatInput({ onSendMessage, disabled = false }: ChatInputProps) {
       if (textareaRef.current) {
         textareaRef.current.style.height = "auto";
       }
-    } catch (error) {
+    } catch {
       // Error is handled upstream usually (e.g., toast in the parent component)
     } finally {
       setIsSending(false);

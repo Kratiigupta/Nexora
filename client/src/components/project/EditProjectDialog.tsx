@@ -71,15 +71,16 @@ export function EditProjectDialog({ project, onSuccess, trigger }: EditProjectDi
       toast.success("Project updated successfully");
       onSuccess(updatedProject);
       setOpen(false);
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (error instanceof z.ZodError) {
         const newErrors: Record<string, string> = {};
-        error.issues.forEach((err: any) => {
+        error.issues.forEach((err: z.ZodIssue) => {
           if (err.path[0] !== undefined) newErrors[String(err.path[0])] = err.message;
         });
         setErrors(newErrors);
       } else {
-        toast.error(error.response?.data?.message || "Failed to update project");
+        const e = error as { response?: { data?: { message?: string } } };
+        toast.error(e.response?.data?.message || "Failed to update project");
       }
     } finally {
       setIsLoading(false);

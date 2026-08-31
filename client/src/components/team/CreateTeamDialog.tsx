@@ -10,7 +10,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -91,15 +90,16 @@ export function CreateTeamDialog({ onSuccess, trigger }: CreateTeamDialogProps) 
         isPublic: true,
       });
       setOpen(false);
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (error instanceof z.ZodError) {
         const newErrors: Record<string, string> = {};
-        error.issues.forEach((err: any) => {
+        error.issues.forEach((err: z.ZodIssue) => {
           if (err.path[0]) newErrors[err.path[0].toString()] = err.message;
         });
         setErrors(newErrors);
       } else {
-        toast.error(error.response?.data?.message || "Failed to create team");
+        const e = error as { response?: { data?: { message?: string } } };
+        toast.error(e.response?.data?.message || "Failed to create team");
       }
     } finally {
       setIsLoading(false);

@@ -141,6 +141,7 @@ export const getEventById = async (
     
     // Remove the bookmarks array to keep response clean
     const { bookmarks, ...eventData } = event;
+    void bookmarks;
 
     sendSuccess(res, { ...eventData, isBookmarked });
   } catch (error) {

@@ -69,7 +69,7 @@ export function ProjectKanban({
                   <CreateTaskDialog 
                     project={project} 
                     onSuccess={onTaskCreated} 
-                    initialStatus={column.id as any}
+                    initialStatus={column.id as "todo" | "in_progress" | "in_review" | "done"}
                     trigger={
                       <Button variant="ghost" size="icon" className="h-7 w-7">
                         <Plus className="h-4 w-4" />

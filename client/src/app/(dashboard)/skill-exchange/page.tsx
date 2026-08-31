@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SkillExchangeList } from "@/components/skill-exchange/SkillExchangeList";
 import { MentorCard } from "@/components/skill-exchange/MentorCard";
@@ -36,45 +36,46 @@ export default function SkillExchangePage() {
   const [scheduleSessionCurrent, setScheduleSessionCurrent] = useState<string | null>(null);
   const [rateSessionId, setRateSessionId] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (activeTab === "discover") {
-      fetchMentors();
-    } else {
-      fetchSessions();
-    }
-  }, [activeTab]);
-
-  const fetchMentors = async () => {
+  const fetchMentors = useCallback(async () => {
     setLoadingMentors(true);
     try {
       const data = await profileService.getRecommendedTeammates();
       setMentors(data);
-    } catch (error) {
+    } catch {
       toast.error("Failed to load mentors");
     } finally {
       setLoadingMentors(false);
     }
-  };
+  }, []);
 
-  const fetchSessions = async () => {
+  const fetchSessions = useCallback(async () => {
     setLoadingSessions(true);
     try {
       const data = await skillExchangeService.getSessions(1, 100);
       setSessions(data.data);
-    } catch (error) {
+    } catch {
       toast.error("Failed to load sessions");
     } finally {
       setLoadingSessions(false);
     }
-  };
+  }, []);
 
-  const handleAction = async (action: () => Promise<any>, successMessage: string) => {
+  useEffect(() => {
+    if (activeTab === "discover") {
+      void Promise.resolve().then(() => fetchMentors());
+    } else {
+      void Promise.resolve().then(() => fetchSessions());
+    }
+  }, [activeTab, fetchMentors, fetchSessions]);
+
+  const handleAction = async (action: () => Promise<unknown>, successMessage: string) => {
     try {
       await action();
       toast.success(successMessage);
       fetchSessions();
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Action failed");
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } };
+      toast.error(e.response?.data?.message || "Action failed");
     }
   };
 

@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { FolderKanban, Plus, RefreshCw, AlertCircle } from "lucide-react";
+import { useEffect, useState, useCallback } from "react";
+import { FolderKanban, RefreshCw, AlertCircle } from "lucide-react";
 import { projectService } from "@/lib/services/project.service";
 import type { Project } from "@/types/project";
 import { Button } from "@/components/ui/button";
@@ -14,24 +14,25 @@ export default function ProjectsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const loadProjects = async () => {
+  const loadProjects = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
       const data = await projectService.getMyProjects();
       setProjects(data);
-    } catch (err: any) {
-      setError(err.response?.data?.message || "Failed to load projects. Please try again later.");
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } };
+      setError(e.response?.data?.message || "Failed to load projects. Please try again later.");
     } finally {
       setIsLoading(false);
     }
-  };
-
-  useEffect(() => {
-    loadProjects();
   }, []);
 
-  const handleProjectCreated = (project: Project) => {
+  useEffect(() => {
+    void Promise.resolve().then(() => loadProjects());
+  }, [loadProjects]);
+
+  const handleProjectCreated = () => {
     loadProjects();
   };
 

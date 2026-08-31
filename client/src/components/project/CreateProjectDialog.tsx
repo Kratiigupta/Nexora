@@ -53,30 +53,32 @@ export function CreateProjectDialog({ onSuccess, trigger, defaultTeamId }: Creat
     teamId: defaultTeamId || "personal", // "personal" is a special value indicating no team
   });
 
-  useEffect(() => {
-    if (open && teams.length === 0) {
-      loadTeams();
-    }
-  }, [open]);
-
-  useEffect(() => {
-    if (defaultTeamId) {
-      setFormData(prev => ({ ...prev, teamId: defaultTeamId }));
-    }
-  }, [defaultTeamId]);
-
   const loadTeams = async () => {
     setIsLoadingTeams(true);
     try {
       const myTeams = await teamService.getMyTeams();
       // Filter for teams where user has permission to create projects (in backend: any active member can)
       setTeams(myTeams);
-    } catch (error) {
+    } catch {
       toast.error("Failed to load your teams");
     } finally {
       setIsLoadingTeams(false);
     }
   };
+
+  useEffect(() => {
+    if (open && teams.length === 0) {
+      void Promise.resolve().then(() => loadTeams());
+    }
+  }, [open, teams.length]);
+
+  useEffect(() => {
+    if (defaultTeamId) {
+      void Promise.resolve().then(() => setFormData(prev => ({ ...prev, teamId: defaultTeamId })));
+    }
+  }, [defaultTeamId]);
+
+
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -120,15 +122,16 @@ export function CreateProjectDialog({ onSuccess, trigger, defaultTeamId }: Creat
         teamId: defaultTeamId || "personal",
       });
       setOpen(false);
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (error instanceof z.ZodError) {
         const newErrors: Record<string, string> = {};
-        error.issues.forEach((err: any) => {
+        error.issues.forEach((err: z.ZodIssue) => {
           if (err.path[0]) newErrors[err.path[0].toString()] = err.message;
         });
         setErrors(newErrors);
       } else {
-        toast.error(error.response?.data?.message || "Failed to create project");
+        const e = error as { response?: { data?: { message?: string } } };
+        toast.error(e.response?.data?.message || "Failed to create project");
       }
     } finally {
       setIsLoading(false);

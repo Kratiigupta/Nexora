@@ -10,7 +10,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -33,23 +32,23 @@ export function InviteMemberDialog({ teamId, trigger, onInviteSuccess }: InviteM
   const [invitedIds, setInvitedIds] = useState<Set<string>>(new Set());
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (open && recommendations.length === 0) {
-      loadRecommendations();
-    }
-  }, [open]);
-
   const loadRecommendations = async () => {
     setIsLoading(true);
     try {
       const data = await profileService.getRecommendedTeammates();
       setRecommendations(data);
-    } catch (error) {
+    } catch {
       toast.error("Failed to load recommendations");
     } finally {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (open && recommendations.length === 0) {
+      void Promise.resolve().then(() => loadRecommendations());
+    }
+  }, [open, recommendations.length]);
 
   const handleInvite = async (userId: string, name: string) => {
     setInvitingIds((prev) => new Set(prev).add(userId));
@@ -58,8 +57,9 @@ export function InviteMemberDialog({ teamId, trigger, onInviteSuccess }: InviteM
       toast.success(`Invitation sent to ${name}`);
       setInvitedIds((prev) => new Set(prev).add(userId));
       if (onInviteSuccess) onInviteSuccess();
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || `Failed to invite ${name}`);
+    } catch (error: unknown) {
+      const e = error as { response?: { data?: { message?: string } } };
+      toast.error(e.response?.data?.message || `Failed to invite ${name}`);
     } finally {
       setInvitingIds((prev) => {
         const next = new Set(prev);

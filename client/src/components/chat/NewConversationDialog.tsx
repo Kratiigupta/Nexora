@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Loader2, MessageSquare, Users, FolderKanban } from "lucide-react";
 import { profileService } from "@/lib/services/profile.service";
@@ -49,7 +49,7 @@ export function NewConversationDialog({ open, onOpenChange, onSuccess }: NewConv
           const myProjects = await projectService.getMyProjects();
           setProjects(myProjects);
         }
-      } catch (error) {
+      } catch {
         toast.error(`Failed to load ${tab}s`);
       } finally {
         setIsLoading(false);
@@ -71,7 +71,7 @@ export function NewConversationDialog({ open, onOpenChange, onSuccess }: NewConv
       const conversation = await chatService.createConversation(payload);
       onSuccess(conversation.id);
       onOpenChange(false);
-    } catch (error) {
+    } catch (error: unknown) {
       const err = error as { response?: { data?: { message?: string } } };
       toast.error(err.response?.data?.message || "Failed to start conversation");
     } finally {

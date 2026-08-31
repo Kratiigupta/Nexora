@@ -4,7 +4,7 @@ import { AuthenticatedRequest } from "../middleware/auth";
 import { ApiError } from "../utils/ApiError";
 import { sendSuccess } from "../utils/helpers";
 import { getIO } from "../config/socket";
-import { ConversationType, MessageType, TeamMemberRole, NotificationType } from "@prisma/client";
+import { MessageType, NotificationType } from "@prisma/client";
 
 /**
  * Helper to check if a user can access a conversation.

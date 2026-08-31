@@ -60,25 +60,21 @@ export function CreateTaskDialog({ project, onSuccess, trigger, initialStatus = 
   });
 
   useEffect(() => {
-    if (taskToEdit) {
-      setFormData({
-        title: taskToEdit.title,
-        description: taskToEdit.description || "",
-        status: taskToEdit.status,
-        priority: taskToEdit.priority,
-        assignedTo: taskToEdit.assignedTo || "unassigned",
-        dueDate: taskToEdit.dueDate ? taskToEdit.dueDate.split("T")[0] : "",
-      });
-    } else {
-      setFormData(prev => ({ ...prev, status: initialStatus }));
-    }
+    void Promise.resolve().then(() => {
+      if (taskToEdit) {
+        setFormData({
+          title: taskToEdit.title,
+          description: taskToEdit.description || "",
+          status: taskToEdit.status,
+          priority: taskToEdit.priority,
+          assignedTo: taskToEdit.assignedTo || "unassigned",
+          dueDate: taskToEdit.dueDate ? taskToEdit.dueDate.split("T")[0] : "",
+        });
+      } else {
+        setFormData(prev => ({ ...prev, status: initialStatus }));
+      }
+    });
   }, [initialStatus, taskToEdit, open]);
-
-  useEffect(() => {
-    if (open && project.teamId && teamMembers.length === 0) {
-      loadTeamMembers(project.teamId);
-    }
-  }, [open, project.teamId]);
 
   const loadTeamMembers = async (teamId: string) => {
     try {
@@ -86,10 +82,16 @@ export function CreateTaskDialog({ project, onSuccess, trigger, initialStatus = 
       if (team.members) {
         setTeamMembers(team.members);
       }
-    } catch (error) {
+    } catch {
       toast.error("Failed to load team members for assignment");
     }
   };
+
+  useEffect(() => {
+    if (open && project.teamId && teamMembers.length === 0) {
+      void Promise.resolve().then(() => loadTeamMembers(project.teamId!));
+    }
+  }, [open, project.teamId, teamMembers.length]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -139,15 +141,16 @@ export function CreateTaskDialog({ project, onSuccess, trigger, initialStatus = 
         });
       }
       setOpen(false);
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (error instanceof z.ZodError) {
         const newErrors: Record<string, string> = {};
-        error.issues.forEach((err: any) => {
+        error.issues.forEach((err: z.ZodIssue) => {
           if (err.path[0] !== undefined) newErrors[String(err.path[0])] = err.message;
         });
         setErrors(newErrors);
       } else {
-        toast.error(error.response?.data?.message || "Failed to create task");
+        const e = error as { response?: { data?: { message?: string } } };
+        toast.error(e.response?.data?.message || "Failed to create task");
       }
     } finally {
       setIsLoading(false);

@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Users, Shield, LogOut, UserMinus, ShieldAlert, MoreHorizontal, AlertTriangle, MessageSquare } from "lucide-react";
+import { ArrowLeft, Users, LogOut, UserMinus, ShieldAlert, MoreHorizontal, AlertTriangle, MessageSquare } from "lucide-react";
 
 import { toast } from "sonner";
 import { teamService } from "@/lib/services/team.service";
@@ -44,7 +44,7 @@ export default function TeamDetailsPage() {
   const [memberToRemove, setMemberToRemove] = useState<TeamMember | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const fetchTeam = async () => {
+  const fetchTeam = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
@@ -65,18 +65,19 @@ export default function TeamDetailsPage() {
         }).catch(() => {});
       });
 
-    } catch (err: any) {
-      setError(err.response?.data?.message || "Failed to load team details");
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } };
+      setError(e.response?.data?.message || "Failed to load team details");
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [teamId]);
 
   useEffect(() => {
     if (teamId) {
-      fetchTeam();
+      void Promise.resolve().then(() => fetchTeam());
     }
-  }, [teamId]);
+  }, [teamId, fetchTeam]);
 
   const handleLeaveTeam = async () => {
     setIsProcessing(true);
@@ -84,8 +85,9 @@ export default function TeamDetailsPage() {
       await teamService.leaveTeam(teamId);
       toast.success(`You have left ${team?.name}`);
       router.push("/teams");
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || "Failed to leave team");
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } };
+      toast.error(e.response?.data?.message || "Failed to leave team");
       setIsProcessing(false);
       setIsLeaveDialogOpen(false);
     }
@@ -99,8 +101,9 @@ export default function TeamDetailsPage() {
       toast.success(`Removed ${memberToRemove.user?.fullName} from the team`);
       setMemberToRemove(null);
       await fetchTeam(); // Refresh
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || "Failed to remove member");
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } };
+      toast.error(e.response?.data?.message || "Failed to remove member");
     } finally {
       setIsProcessing(false);
     }
@@ -166,8 +169,9 @@ export default function TeamDetailsPage() {
                   const { chatService } = await import("@/lib/services/chat.service");
                   const conv = await chatService.createConversation({ type: "team", teamId });
                   router.push(`/messages?conversation=${conv.id}`);
-                } catch (err: any) {
-                  toast.error(err.response?.data?.message || "Failed to open team chat");
+                } catch (err: unknown) {
+                  const e = err as { response?: { data?: { message?: string } } };
+                  toast.error(e.response?.data?.message || "Failed to open team chat");
                 }
               }}
             >

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -31,18 +31,7 @@ export function CreateSkillExchangeDialog({
   const [description, setDescription] = useState("");
   const [scheduledAt, setScheduledAt] = useState("");
 
-  useEffect(() => {
-    if (open && mentorUsername) {
-      loadProfile(mentorUsername);
-    } else {
-      setProfile(null);
-      setSkillId("");
-      setDescription("");
-      setScheduledAt("");
-    }
-  }, [open, mentorUsername]);
-
-  const loadProfile = async (username: string) => {
+  const loadProfile = useCallback(async (username: string) => {
     setLoading(true);
     try {
       const data = await profileService.getPublicProfile(username);
@@ -51,13 +40,27 @@ export function CreateSkillExchangeDialog({
       if (data.skills && data.skills.length > 0) {
         setSkillId(data.skills[0].skillId);
       }
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to load mentor profile");
+    } catch (error: unknown) {
+      const e = error as { response?: { data?: { message?: string } } };
+      toast.error(e.response?.data?.message || "Failed to load mentor profile");
       onOpenChange(false);
     } finally {
       setLoading(false);
     }
-  };
+  }, [onOpenChange]);
+
+  useEffect(() => {
+    if (open && mentorUsername) {
+      void Promise.resolve().then(() => loadProfile(mentorUsername));
+    } else {
+      void Promise.resolve().then(() => {
+        setProfile(null);
+        setSkillId("");
+        setDescription("");
+        setScheduledAt("");
+      });
+    }
+  }, [open, mentorUsername, loadProfile]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,7 +72,7 @@ export function CreateSkillExchangeDialog({
 
     setSubmitting(true);
     try {
-      const payload: any = {
+      const payload: Record<string, unknown> = {
         mentorId: profile.id,
         skillId,
       };
@@ -80,12 +83,14 @@ export function CreateSkillExchangeDialog({
         payload.scheduledAt = dateObj.toISOString();
       }
 
-      await skillExchangeService.createSession(payload);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await skillExchangeService.createSession(payload as any);
       toast.success("Mentorship request sent successfully!");
       onOpenChange(false);
       onSuccess?.();
-    } catch (error: any) {
-      toast.error(error.response?.data?.error?.message || error.response?.data?.message || "Failed to send request");
+    } catch (error: unknown) {
+      const e = error as { response?: { data?: { error?: { message?: string }, message?: string } } };
+      toast.error(e.response?.data?.error?.message || e.response?.data?.message || "Failed to send request");
     } finally {
       setSubmitting(false);
     }

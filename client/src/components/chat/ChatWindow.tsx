@@ -63,7 +63,7 @@ export function ChatWindow({
       if (pageNum === 1) {
         setTimeout(scrollToBottom, 100);
       }
-    } catch (error) {
+    } catch {
       toast.error("Failed to load messages");
     } finally {
       setIsLoading(false);
@@ -80,8 +80,10 @@ export function ChatWindow({
 
   // Initial load
   useEffect(() => {
-    setPage(1);
-    fetchMessages(1);
+    void Promise.resolve().then(() => {
+      setPage(1);
+      fetchMessages(1);
+    });
   }, [conversationId, fetchMessages]);
 
   // Socket setup

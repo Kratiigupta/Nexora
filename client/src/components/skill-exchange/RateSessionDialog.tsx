@@ -43,8 +43,9 @@ export function RateSessionDialog({
       toast.success("Rating submitted successfully!");
       onOpenChange(false);
       onSuccess?.();
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to submit rating");
+    } catch (error: unknown) {
+      const e = error as { response?: { data?: { message?: string } } };
+      toast.error(e.response?.data?.message || "Failed to submit rating");
     } finally {
       setSubmitting(false);
     }

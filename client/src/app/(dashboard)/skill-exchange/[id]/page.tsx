@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/authStore";
 import { skillExchangeService } from "@/lib/services/skillExchange.service";
@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, BookOpen, Calendar, Clock, Star, AlertCircle } from "lucide-react";
+import { ArrowLeft, BookOpen, Calendar, Star, AlertCircle } from "lucide-react";
 import { getInitials } from "@/lib/utils";
 import { toast } from "sonner";
 import { SkillExchangeStatusBadge } from "@/components/skill-exchange/SkillExchangeStatusBadge";
@@ -32,30 +32,32 @@ export default function SessionDetailsPage() {
   const [showSchedule, setShowSchedule] = useState(false);
   const [showRating, setShowRating] = useState(false);
 
-  useEffect(() => {
-    fetchSession();
-  }, [sessionId]);
-
-  const fetchSession = async () => {
+  const fetchSession = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const data = await skillExchangeService.getSessionById(sessionId);
       setSession(data);
-    } catch (err: any) {
-      setError(err.response?.data?.message || "Failed to load session details");
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } };
+      setError(e.response?.data?.message || "Failed to load session details");
     } finally {
       setLoading(false);
     }
-  };
+  }, [sessionId]);
 
-  const handleAction = async (action: () => Promise<any>, successMessage: string) => {
+  useEffect(() => {
+    void Promise.resolve().then(() => fetchSession());
+  }, [fetchSession]);
+
+  const handleAction = async (action: () => Promise<unknown>, successMessage: string) => {
     try {
       await action();
       toast.success(successMessage);
       fetchSession();
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || "Action failed");
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } };
+      toast.error(e.response?.data?.message || "Action failed");
     }
   };
 
@@ -166,7 +168,7 @@ export default function SessionDetailsPage() {
 
               {session.status === "completed" && (
                 <div className="pt-4 border-t">
-                  <Label className="text-muted-foreground text-xs uppercase tracking-wider">Rating & Feedback</Label>
+                  <Label className="text-muted-foreground text-xs uppercase tracking-wider">Rating &amp; Feedback</Label>
                   <div className="mt-2 p-4 bg-amber-500/5 rounded-lg border border-amber-500/20">
                     {session.rating ? (
                       <div className="space-y-3">
@@ -176,7 +178,7 @@ export default function SessionDetailsPage() {
                           ))}
                         </div>
                         {session.feedback && (
-                          <p className="text-sm italic text-muted-foreground">"{session.feedback}"</p>
+                          <p className="text-sm italic text-muted-foreground">&quot;{session.feedback}&quot;</p>
                         )}
                       </div>
                     ) : (

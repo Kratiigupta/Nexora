@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
+import { useEffect, useState, useCallback, use } from "react";
 import { useRouter } from "next/navigation";
 import { FolderKanban, Users, GitBranch, ExternalLink, Trash2, ArrowLeft, MessageSquare } from "lucide-react";
 import Link from "next/link";
@@ -30,22 +30,23 @@ export default function ProjectWorkspacePage({ params }: { params: Promise<{ id:
   const [taskToEdit, setTaskToEdit] = useState<ProjectTask | undefined>(undefined);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
-  const loadProject = async () => {
+  const loadProject = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
       const data = await projectService.getProjectById(resolvedParams.id);
       setProject(data);
-    } catch (err: any) {
-      setError(err.response?.data?.message || "Failed to load project workspace");
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } };
+      setError(e.response?.data?.message || "Failed to load project workspace");
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [resolvedParams.id]);
 
   useEffect(() => {
-    loadProject();
-  }, [resolvedParams.id]);
+    void Promise.resolve().then(() => loadProject());
+  }, [loadProject]);
 
   const handleDeleteProject = async () => {
     if (!project) return;
@@ -56,8 +57,9 @@ export default function ProjectWorkspacePage({ params }: { params: Promise<{ id:
       await projectService.deleteProject(project.id);
       toast.success("Project deleted successfully");
       router.push("/projects");
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to delete project");
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } };
+      toast.error(e.response?.data?.message || "Failed to delete project");
       setIsDeleting(false);
     }
   };
@@ -86,11 +88,12 @@ export default function ProjectWorkspacePage({ params }: { params: Promise<{ id:
   const handleTaskStatusUpdated = async (taskId: string, newStatus: string) => {
     if (!project) return;
     try {
-      const updatedTask = await projectService.updateTask(project.id, taskId, { status: newStatus as any });
+      const updatedTask = await projectService.updateTask(project.id, taskId, { status: newStatus as ProjectTask["status"] });
       handleTaskCreatedOrUpdated(updatedTask);
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to update task status");
-      throw error; // Let the card handle loading state rollback if necessary
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } };
+      toast.error(e.response?.data?.message || "Failed to update task status");
+      throw err; // Let the card handle loading state rollback if necessary
     }
   };
 
@@ -108,8 +111,9 @@ export default function ProjectWorkspacePage({ params }: { params: Promise<{ id:
         };
       });
       toast.success("Task deleted");
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to delete task");
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } };
+      toast.error(e.response?.data?.message || "Failed to delete task");
     }
   };
 
@@ -236,8 +240,9 @@ export default function ProjectWorkspacePage({ params }: { params: Promise<{ id:
                   const { chatService } = await import("@/lib/services/chat.service");
                   const conv = await chatService.createConversation({ type: "project", projectId: project.id });
                   router.push(`/messages?conversation=${conv.id}`);
-                } catch (err: any) {
-                  toast.error(err.response?.data?.message || "Failed to open project chat");
+                } catch (err: unknown) {
+                  const e = err as { response?: { data?: { message?: string } } };
+                  toast.error(e.response?.data?.message || "Failed to open project chat");
                 }
               }}
             >

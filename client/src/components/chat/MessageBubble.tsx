@@ -49,6 +49,7 @@ export function MessageBubble({ message, isOwnMessage, showAvatar = true }: Mess
         >
           {message.type === "image" && message.fileUrl ? (
             <div className="flex flex-col gap-2">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img 
                 src={message.fileUrl} 
                 alt="Uploaded content" 
