@@ -17,4 +17,13 @@ export interface Event {
   createdBy: string;
   createdAt: string;
   isBookmarked?: boolean;
+  creator?: {
+    id: string;
+    fullName: string;
+    username: string;
+    avatarUrl: string | null;
+  };
+  _count?: {
+    bookmarks: number;
+  };
 }
