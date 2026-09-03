@@ -30,6 +30,11 @@ export interface Profile {
   updatedAt: string;
   skills?: UserSkill[];
   profileCompletion?: number;
+  stats?: {
+    projects: number;
+    teams: number;
+    connections: number;
+  };
 }
 
 export interface UserSkill {

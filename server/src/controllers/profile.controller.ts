@@ -70,18 +70,36 @@ export const getMyProfile = async (
 
     const profile = await prisma.profile.findUnique({
       where: { id: userId },
-      include: profileInclude,
+      include: {
+        ...profileInclude,
+        _count: {
+          select: {
+            createdProjects: true,
+            teamMemberships: true,
+            sentConnections: { where: { status: "accepted" } },
+            receivedConnections: { where: { status: "accepted" } },
+          },
+        },
+      },
     });
 
     if (!profile) {
       throw ApiError.notFound("Profile");
     }
 
-    const profileCompletion = calculateProfileCompletion(profile);
+    const profileCompletion = calculateProfileCompletion(profile as any);
+
+    const { _count, ...profileData } = profile;
 
     sendSuccess(res, {
-      ...profile,
+      ...profileData,
       profileCompletion,
+      stats: {
+        projects: _count.createdProjects,
+        teams: _count.teamMemberships,
+        connections:
+          _count.sentConnections + _count.receivedConnections,
+      },
     });
   } catch (error) {
     next(error);

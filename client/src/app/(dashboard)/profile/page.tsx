@@ -74,9 +74,9 @@ export default function ProfilePage() {
       <ProfileHeader
         profile={profile}
         stats={{
-          projects: 0,
-          teams: 0,
-          connections: 0,
+          projects: profile.stats?.projects || 0,
+          teams: profile.stats?.teams || 0,
+          connections: profile.stats?.connections || 0,
         }}
         actions={
           <Link href="/profile/edit">
