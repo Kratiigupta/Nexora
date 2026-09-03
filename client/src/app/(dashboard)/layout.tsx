@@ -1,10 +1,10 @@
 "use client";
 
-import { ReactNode, useState } from "react";
+import { ReactNode, useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { cn } from "@/lib/utils";
+import { cn, timeAgo } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,7 +18,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useAuthStore } from "@/stores/authStore";
+import { useNotificationStore } from "@/stores/notificationStore";
 import { authService } from "@/lib/services/auth.service";
+import { notificationService } from "@/lib/services/notification.service";
 import { getInitials } from "@/lib/utils";
 import { toast } from "sonner";
 import {
@@ -37,6 +39,10 @@ import {
   Moon,
   Sun,
   ChevronRight,
+  CheckCheck,
+  UserPlus,
+  Info,
+  ArrowRight,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import type { Profile } from "@/types/user";
@@ -152,12 +158,67 @@ function SidebarContent({
   );
 }
 
+/** Icon map for notification types in the bell dropdown */
+const notifTypeIcons: Record<string, typeof Bell> = {
+  team_invite: Users,
+  join_request: UserPlus,
+  message: MessageSquare,
+  skill_request: ArrowLeftRight,
+  event_reminder: Calendar,
+  connection_request: UserPlus,
+  system: Info,
+};
+
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { profile, clearAuth } = useAuthStore();
   const { theme, setTheme } = useTheme();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  // ── Notifications ──────────────────────────────────────
+  const {
+    notifications: storeNotifications,
+    unreadCount,
+    setNotifications,
+    markAsRead: storeMarkAsRead,
+    markAllAsRead: storeMarkAllAsRead,
+  } = useNotificationStore();
+
+  const fetchNotifications = useCallback(async () => {
+    try {
+      const { data } = await notificationService.getNotifications({ limit: 8 });
+      setNotifications(data.notifications);
+    } catch {
+      // Silently fail — bell icon will just show no notifications
+    }
+  }, [setNotifications]);
+
+  useEffect(() => {
+    if (profile) {
+      void fetchNotifications();
+    }
+  }, [profile, fetchNotifications]);
+
+  const handleBellMarkAsRead = async (id: string) => {
+    try {
+      await notificationService.markAsRead(id);
+      storeMarkAsRead(id);
+    } catch {
+      toast.error("Failed to mark notification as read");
+    }
+  };
+
+  const handleBellMarkAllAsRead = async () => {
+    if (unreadCount === 0) return;
+    try {
+      await notificationService.markAllAsRead();
+      storeMarkAllAsRead();
+      toast.success("All notifications marked as read");
+    } catch {
+      toast.error("Failed to mark all as read");
+    }
+  };
 
   const handleLogout = async () => {
     try {
@@ -235,14 +296,104 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             </Button>
 
             {/* Notifications */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-muted-foreground relative"
-              aria-label="Notifications"
-            >
-              <Bell className="h-4 w-4" />
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                className="relative h-9 w-9 rounded-full inline-flex items-center justify-center hover:bg-accent transition-colors focus:outline-none text-muted-foreground"
+                aria-label="Notifications"
+              >
+                <Bell className="h-4 w-4" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-primary-foreground">
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </span>
+                )}
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-80 max-h-[28rem] overflow-y-auto">
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel className="flex items-center justify-between">
+                    <span>Notifications</span>
+                    {unreadCount > 0 && (
+                      <button
+                        className="text-[11px] font-normal text-primary hover:underline flex items-center gap-1"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handleBellMarkAllAsRead();
+                        }}
+                      >
+                        <CheckCheck className="h-3 w-3" />
+                        Mark all read
+                      </button>
+                    )}
+                  </DropdownMenuLabel>
+                </DropdownMenuGroup>
+                <DropdownMenuSeparator />
+                {storeNotifications.length === 0 ? (
+                  <div className="px-4 py-8 text-center">
+                    <Bell className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">No notifications</p>
+                  </div>
+                ) : (
+                  storeNotifications.slice(0, 6).map((notif) => {
+                    const NIcon = notifTypeIcons[notif.type] || Bell;
+                    return (
+                      <DropdownMenuItem
+                        key={notif.id}
+                        className={cn(
+                          "flex items-start gap-3 py-3 px-3 cursor-pointer",
+                          !notif.isRead && "bg-primary/[0.04]"
+                        )}
+                        onClick={() => {
+                          if (!notif.isRead) handleBellMarkAsRead(notif.id);
+                          router.push("/notifications");
+                        }}
+                      >
+                        <div
+                          className={cn(
+                            "flex h-8 w-8 items-center justify-center rounded-full shrink-0 mt-0.5",
+                            !notif.isRead
+                              ? "bg-primary/10 text-primary"
+                              : "bg-muted text-muted-foreground"
+                          )}
+                        >
+                          <NIcon className="h-3.5 w-3.5" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p
+                            className={cn(
+                              "text-sm leading-snug truncate",
+                              !notif.isRead
+                                ? "font-medium text-foreground"
+                                : "text-muted-foreground"
+                            )}
+                          >
+                            {notif.title}
+                          </p>
+                          {notif.body && (
+                            <p className="text-xs text-muted-foreground truncate mt-0.5">
+                              {notif.body}
+                            </p>
+                          )}
+                          <p className="text-[10px] text-muted-foreground/60 mt-1">
+                            {timeAgo(notif.createdAt)}
+                          </p>
+                        </div>
+                        {!notif.isRead && (
+                          <div className="h-2 w-2 rounded-full bg-primary shrink-0 mt-2" />
+                        )}
+                      </DropdownMenuItem>
+                    );
+                  })
+                )}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="justify-center text-primary font-medium text-sm py-2.5 cursor-pointer"
+                  onClick={() => router.push("/notifications")}
+                >
+                  View all notifications
+                  <ArrowRight className="h-3.5 w-3.5 ml-1" />
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             {/* User menu */}
             {profile && (
