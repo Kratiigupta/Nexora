@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { profileService } from "@/lib/services/profile.service";
+import { connectionService, ConnectionStatusResponse } from "@/lib/services/connection.service";
+import { chatService } from "@/lib/services/chat.service";
 import { ProfileSkeleton } from "@/components/profile/ProfileSkeleton";
 import { ProfileHeader } from "@/components/profile/ProfileHeader";
 import { SkillChip } from "@/components/profile/SkillChip";
@@ -10,6 +12,7 @@ import { PortfolioCard, buildPortfolioLinks } from "@/components/profile/Portfol
 import { DashboardCard } from "@/components/dashboard/DashboardCard";
 import { Button } from "@/components/ui/button";
 import type { PublicProfile } from "@/types/user";
+import { toast } from "sonner";
 import { useAuthStore } from "@/stores/authStore";
 import {
   Code2,
@@ -18,6 +21,9 @@ import {
   UserPlus,
   MessageSquare,
   ArrowLeftRight,
+  Loader2,
+  Check,
+  UserMinus,
 } from "lucide-react";
 import { CreateSkillExchangeDialog } from "@/components/skill-exchange/CreateSkillExchangeDialog";
 
@@ -36,6 +42,10 @@ export default function PublicProfilePage() {
   const [error, setError] = useState<string | null>(null);
   const [requestMentor, setRequestMentor] = useState<string | null>(null);
 
+  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatusResponse["status"]>("none");
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [isMessaging, setIsMessaging] = useState(false);
+
   // If viewing own profile, redirect to /profile
   useEffect(() => {
     if (myProfile && myProfile.username === username) {
@@ -48,6 +58,12 @@ export default function PublicProfilePage() {
       try {
         const data = await profileService.getPublicProfile(username);
         setProfile(data);
+
+        // Also fetch connection status if not my own profile
+        if (myProfile && myProfile.username !== username) {
+          const connData = await connectionService.getConnectionStatus(data.id);
+          setConnectionStatus(connData.status);
+        }
       } catch (err: unknown) {
         const error = err as { response?: { status?: number } };
         if (error.response?.status === 404) {
@@ -63,11 +79,60 @@ export default function PublicProfilePage() {
     if (username) {
       fetchProfile();
     }
-  }, [username]);
+  }, [username, myProfile]);
 
   if (isLoading) {
     return <ProfileSkeleton />;
   }
+
+  const handleConnect = async () => {
+    if (!profile) return;
+    setIsConnecting(true);
+    try {
+      if (connectionStatus === "pending_received") {
+        await connectionService.updateConnectionStatus(profile.id, "accepted");
+        setConnectionStatus("connected");
+        toast.success("Connection accepted");
+      } else {
+        await connectionService.sendConnectionRequest(profile.id);
+        setConnectionStatus("pending_sent");
+        toast.success("Connection request sent");
+      }
+    } catch {
+      toast.error("Failed to update connection");
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
+  const handleDisconnect = async () => {
+    if (!profile) return;
+    setIsConnecting(true);
+    try {
+      await connectionService.removeConnection(profile.id);
+      setConnectionStatus("none");
+      toast.success(connectionStatus === "connected" ? "Disconnected" : "Request cancelled");
+    } catch {
+      toast.error("Failed to remove connection");
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
+  const handleMessage = async () => {
+    if (!profile) return;
+    setIsMessaging(true);
+    try {
+      const conversation = await chatService.createConversation({
+        type: "direct",
+        participantId: profile.id,
+      });
+      router.push(`/messages?conversation=${conversation.id}`);
+    } catch {
+      toast.error("Failed to open conversation");
+      setIsMessaging(false);
+    }
+  };
 
   if (error || !profile) {
     return (
@@ -103,14 +168,32 @@ export default function PublicProfilePage() {
               <ArrowLeftRight className="h-4 w-4" />
               Request Mentorship
             </Button>
-            <Button variant="outline" size="sm" className="gap-2">
-              <MessageSquare className="h-4 w-4" />
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              onClick={handleMessage}
+              disabled={isMessaging}
+            >
+              {isMessaging ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageSquare className="h-4 w-4" />}
               Message
             </Button>
-            <Button size="sm" className="gap-2">
-              <UserPlus className="h-4 w-4" />
-              Connect
-            </Button>
+            {connectionStatus === "connected" ? (
+              <Button size="sm" variant="outline" className="gap-2 text-destructive hover:text-destructive" onClick={handleDisconnect} disabled={isConnecting}>
+                {isConnecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserMinus className="h-4 w-4" />}
+                Disconnect
+              </Button>
+            ) : connectionStatus === "pending_sent" ? (
+              <Button size="sm" variant="secondary" className="gap-2" onClick={handleDisconnect} disabled={isConnecting}>
+                {isConnecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                Request Sent
+              </Button>
+            ) : (
+              <Button size="sm" className="gap-2" onClick={handleConnect} disabled={isConnecting}>
+                {isConnecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
+                {connectionStatus === "pending_received" ? "Accept Request" : "Connect"}
+              </Button>
+            )}
           </div>
         }
       />

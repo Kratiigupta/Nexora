@@ -8,6 +8,7 @@ import chatRoutes from "./chat.routes";
 import skillExchangeRoutes from "./skillExchange.routes";
 import eventRoutes from "./event.routes";
 import notificationRoutes from "./notification.routes";
+import connectionRoutes from "./connection.routes";
 import aiRoutes from "./ai.routes";
 import uploadRoutes from "./upload.routes";
 import adminRoutes from "./admin.routes";
@@ -41,6 +42,7 @@ router.use("/chat", authMiddleware, chatRoutes);
 router.use("/skill-exchange", authMiddleware, skillExchangeRoutes);
 router.use("/events", authMiddleware, eventRoutes);
 router.use("/notifications", authMiddleware, notificationRoutes);
+router.use("/connections", authMiddleware, connectionRoutes);
 router.use("/upload", authMiddleware, uploadRoutes);
 
 // Dashboard — authenticated, standalone path
