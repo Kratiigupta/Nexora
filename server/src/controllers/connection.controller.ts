@@ -4,6 +4,8 @@ import { AuthenticatedRequest } from "../middleware/auth";
 import { ApiError } from "../utils/ApiError";
 import { sendSuccess } from "../utils/helpers";
 import { NotificationType } from "@prisma/client";
+import { getIO } from "../config/socket";
+import { logger } from "../utils/logger";
 
 /**
  * GET /api/v1/connections/:userId/status
@@ -108,16 +110,21 @@ export const sendConnectionRequest = async (
 
     // Notify the target user
     const currentUser = await prisma.profile.findUnique({ where: { id: currentUserId } });
-    await prisma.notification.create({
-      data: {
-        userId: targetUserId,
-        type: NotificationType.connection_request,
-        title: "New Connection Request",
-        body: `${currentUser?.fullName} wants to connect with you.`,
-        referenceType: "profile",
-        referenceId: currentUserId,
-      },
-    }).catch(console.error);
+    try {
+      const notification = await prisma.notification.create({
+        data: {
+          userId: targetUserId,
+          type: NotificationType.connection_request,
+          title: "New Connection Request",
+          body: `${currentUser?.fullName} wants to connect with you.`,
+          referenceType: "profile",
+          referenceId: currentUserId,
+        },
+      });
+      getIO().to(`user:${targetUserId}`).emit("notification", notification);
+    } catch (err) {
+      logger.error("Failed to create/emit connection request notification", err);
+    }
 
     sendSuccess(res, { status: "pending_sent", connection }, 201);
   } catch (error) {
@@ -171,16 +178,21 @@ export const updateConnectionStatus = async (
 
     // Notify the requester that they were accepted
     const currentUser = await prisma.profile.findUnique({ where: { id: currentUserId } });
-    await prisma.notification.create({
-      data: {
-        userId: targetUserId,
-        type: NotificationType.system,
-        title: "Connection Accepted",
-        body: `${currentUser?.fullName} accepted your connection request.`,
-        referenceType: "profile",
-        referenceId: currentUserId,
-      },
-    }).catch(console.error);
+    try {
+      const notification = await prisma.notification.create({
+        data: {
+          userId: targetUserId,
+          type: NotificationType.system,
+          title: "Connection Accepted",
+          body: `${currentUser?.fullName} accepted your connection request.`,
+          referenceType: "profile",
+          referenceId: currentUserId,
+        },
+      });
+      getIO().to(`user:${targetUserId}`).emit("notification", notification);
+    } catch (err) {
+      logger.error("Failed to create/emit connection accepted notification", err);
+    }
 
     sendSuccess(res, { status: "connected", connection: updated });
   } catch (error) {

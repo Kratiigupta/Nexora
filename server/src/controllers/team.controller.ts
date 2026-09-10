@@ -4,6 +4,8 @@ import { AuthenticatedRequest } from "../middleware/auth";
 import { ApiError } from "../utils/ApiError";
 import { sendSuccess } from "../utils/helpers";
 import { TeamType, TeamMemberRole, JoinRequestStatus, NotificationType } from "@prisma/client";
+import { getIO } from "../config/socket";
+import { logger } from "../utils/logger";
 
 /**
  * POST /api/v1/teams
@@ -177,7 +179,7 @@ export const inviteToTeam = async (
         },
       });
 
-      await tx.notification.create({
+      const notification = await tx.notification.create({
         data: {
           userId,
           type: NotificationType.team_invite,
@@ -188,10 +190,16 @@ export const inviteToTeam = async (
         },
       });
 
-      return newInvite;
+      return { newInvite, notification };
     });
 
-    sendSuccess(res, invite);
+    try {
+      getIO().to(`user:${userId}`).emit("notification", invite.notification);
+    } catch (e) {
+      logger.warn("Socket.IO not initialized or failed to emit", e);
+    }
+
+    sendSuccess(res, invite.newInvite);
   } catch (error) {
     next(error);
   }

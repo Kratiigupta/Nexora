@@ -4,7 +4,8 @@ import { AuthenticatedRequest } from "../middleware/auth";
 import { ApiError } from "../utils/ApiError";
 import { sendSuccess } from "../utils/helpers";
 import { getIO } from "../config/socket";
-import { MessageType, NotificationType } from "@prisma/client";
+import { MessageType } from "@prisma/client";
+import { logger } from "../utils/logger";
 
 /**
  * Helper to check if a user can access a conversation.
@@ -350,23 +351,6 @@ export const sendMessage = async (
     
     if (conversation.type === "direct") {
       conversation.participants.forEach((p) => participantIds.add(p.userId));
-      
-      // Since it's a direct message, it's good practice to send a notification if they are not the sender
-      const receiverId = conversation.participants.find(p => p.userId !== userId)?.userId;
-      if (receiverId) {
-        // We'll trust Socket.IO to deliver real-time, but for direct messages
-        // we can also fire a Notification as suggested by the schema.
-        await prisma.notification.create({
-          data: {
-            userId: receiverId,
-            type: NotificationType.message,
-            title: `New message from ${message.sender.fullName}`,
-            body: type === "text" ? content.substring(0, 50) : `Sent an ${type}`,
-            referenceType: "conversation",
-            referenceId: conversationId,
-          }
-        }).catch(err => console.error("Failed to create message notification:", err));
-      }
     } else if (conversation.type === "team") {
       conversation.team?.members.forEach((m) => participantIds.add(m.userId));
     } else if (conversation.type === "project") {
@@ -384,7 +368,7 @@ export const sendMessage = async (
         io.to(`user:${pId}`).emit("new_message", message);
       });
     } catch (e) {
-      console.warn("Socket.IO not initialized or failed to emit", e);
+      logger.warn("Socket.IO not initialized or failed to emit", e);
     }
 
     sendSuccess(res, message, 201);
