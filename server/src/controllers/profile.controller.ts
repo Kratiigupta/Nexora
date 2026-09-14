@@ -449,16 +449,15 @@ export const getDashboard = async (
         },
       }),
 
-      // Activity heatmap — count per day for last 365 days
-      prisma.activityLog.groupBy({
-        by: ["createdAt"],
+      // Activity heatmap — fetch dates for last 365 days and aggregate in memory
+      prisma.activityLog.findMany({
         where: {
           userId,
           createdAt: {
             gte: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000),
           },
         },
-        _count: true,
+        select: { createdAt: true },
       }),
     ]);
 
@@ -472,7 +471,7 @@ export const getDashboard = async (
     const heatmap: Record<string, number> = {};
     for (const entry of heatmapData) {
       const dateStr = new Date(entry.createdAt).toISOString().split("T")[0] ?? "";
-      heatmap[dateStr] = (heatmap[dateStr] ?? 0) + (entry._count as unknown as number);
+      heatmap[dateStr] = (heatmap[dateStr] ?? 0) + 1;
     }
 
     sendSuccess(res, {

@@ -171,9 +171,22 @@ export const updateConnectionStatus = async (
       return;
     }
 
-    const updated = await prisma.userConnection.update({
-      where: { id: connection.id },
-      data: { status: "accepted" },
+    const updated = await prisma.$transaction(async (tx) => {
+      const conn = await tx.userConnection.update({
+        where: { id: connection.id },
+        data: { status: "accepted" },
+      });
+
+      await tx.activityLog.create({
+        data: {
+          userId: currentUserId,
+          action: "connection_made",
+          description: "Made a new connection",
+          metadata: { connectionId: conn.id, connectedTo: targetUserId },
+        },
+      });
+
+      return conn;
     });
 
     // Notify the requester that they were accepted

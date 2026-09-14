@@ -281,9 +281,22 @@ export const completeSession = async (
       throw ApiError.badRequest("Only accepted or in_progress sessions can be completed");
     }
 
-    const updated = await prisma.skillExchangeSession.update({
-      where: { id: sessionId },
-      data: { status: SkillExchangeStatus.completed },
+    const updated = await prisma.$transaction(async (tx) => {
+      const sess = await tx.skillExchangeSession.update({
+        where: { id: sessionId },
+        data: { status: SkillExchangeStatus.completed },
+      });
+
+      await tx.activityLog.create({
+        data: {
+          userId,
+          action: "session_completed",
+          description: "Completed a skill exchange session",
+          metadata: { sessionId: sess.id, skillId: sess.skillId },
+        },
+      });
+
+      return sess;
     });
 
     sendSuccess(res, updated);
