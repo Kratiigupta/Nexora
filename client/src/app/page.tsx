@@ -18,7 +18,6 @@ import {
   Brain,
   BarChart3,
   Send,
-  Star,
   MapPin,
   Clock,
 } from "lucide-react";
@@ -239,8 +238,8 @@ export default function Home() {
                     <p className="text-xs font-medium text-muted-foreground mb-2">Suggested Matches</p>
                     <div className="space-y-2">
                       {[
-                        { initials: "SP", name: "Sara Patel", role: "UI/UX Designer", match: "92%" },
-                        { initials: "RJ", name: "Rohan Joshi", role: "ML Engineer", match: "87%" },
+                        { initials: "SP", name: "Sara Patel", role: "UI/UX Designer", match: "High" },
+                        { initials: "RJ", name: "Rohan Joshi", role: "ML Engineer", match: "Good" },
                       ].map((person) => (
                         <div
                           key={person.name}
@@ -378,7 +377,7 @@ export default function Home() {
         {/* ════════════════════════════════════
            PLATFORM SHOWCASE
            ════════════════════════════════════ */}
-        <section className="relative py-24 md:py-32 border-t border-border/30">
+        <section id="events" className="relative py-24 md:py-32 border-t border-border/30">
           <div className="mx-auto max-w-7xl px-6">
             <AnimatedSection className="text-center mb-16">
               <p className="text-sm font-semibold tracking-wider text-primary uppercase mb-3">
@@ -432,9 +431,9 @@ export default function Home() {
                   </div>
                   <div className="space-y-2.5">
                     {[
-                      { initials: "AK", name: "Arjun K.", skill: "React · Next.js", match: "94%" },
-                      { initials: "NV", name: "Neha V.", skill: "UI/UX Design", match: "89%" },
-                      { initials: "DM", name: "Dev M.", skill: "Cloud · DevOps", match: "85%" },
+                      { initials: "AK", name: "Arjun K.", skill: "React · Next.js", match: "High" },
+                      { initials: "NV", name: "Neha V.", skill: "UI/UX Design", match: "Good" },
+                      { initials: "DM", name: "Dev M.", skill: "Cloud · DevOps", match: "Good" },
                     ].map((p) => (
                       <div key={p.name} className="flex items-center gap-3 rounded-lg bg-muted/15 border border-border/20 p-2.5">
                         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-primary/50 to-purple-400/50 text-[10px] font-bold text-white">
@@ -520,14 +519,46 @@ export default function Home() {
                 </div>
               </AnimatedSection>
 
-              {/* Card 5 — Events */}
+              {/* Card 5 — Skill Exchange */}
               <AnimatedSection delay={0.16}>
-                <div className="group rounded-2xl border border-border/40 bg-card/60 p-5 backdrop-blur-sm transition-all duration-300 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 sm:col-span-2 lg:col-span-2">
+                <div className="group rounded-2xl border border-border/40 bg-card/60 p-5 backdrop-blur-sm transition-all duration-300 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5">
+                  <div className="flex items-center gap-2 mb-4 text-xs font-medium text-muted-foreground">
+                    <ArrowLeftRight className="h-4 w-4 text-primary" />
+                    Skill Exchange
+                  </div>
+                  <div className="space-y-3">
+                    <div className="rounded-lg bg-muted/15 border border-border/20 p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-xs font-semibold text-foreground">React Fundamentals</p>
+                        <span className="rounded-full bg-success/10 border border-success/15 px-2 py-0.5 text-[10px] font-semibold text-success">Completed</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-primary/50 to-purple-400/50 text-[9px] font-bold text-white">AK</div>
+                        <p className="text-[11px] text-muted-foreground">Mentored by Arjun K.</p>
+                      </div>
+                    </div>
+                    <div className="rounded-lg bg-muted/15 border border-border/20 p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="text-xs font-semibold text-foreground">Data Visualization</p>
+                        <span className="rounded-full bg-primary/10 border border-primary/15 px-2 py-0.5 text-[10px] font-semibold text-primary">In Progress</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-primary/50 to-purple-400/50 text-[9px] font-bold text-white">MR</div>
+                        <p className="text-[11px] text-muted-foreground">Learning from Meera R.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </AnimatedSection>
+
+              {/* Card 6 — Events */}
+              <AnimatedSection delay={0.24}>
+                <div className="group rounded-2xl border border-border/40 bg-card/60 p-5 backdrop-blur-sm transition-all duration-300 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5">
                   <div className="flex items-center gap-2 mb-4 text-xs font-medium text-muted-foreground">
                     <CalendarDays className="h-4 w-4 text-primary" />
                     Upcoming Events
                   </div>
-                  <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-2.5">
                     {[
                       {
                         title: "HackFest 2026",
@@ -552,14 +583,6 @@ export default function Home() {
                         location: "Online",
                         icon: Brain,
                         color: "text-success",
-                      },
-                      {
-                        title: "Startup Pitch Night",
-                        type: "Event",
-                        date: "Nov 5",
-                        location: "Innovation Center",
-                        icon: Star,
-                        color: "text-warning",
                       },
                     ].map((event) => (
                       <div
@@ -590,7 +613,7 @@ export default function Home() {
            COMMUNITY / ABOUT
            ════════════════════════════════════ */}
         <section
-          id="about"
+          id="communities"
           className="relative py-24 md:py-32 border-t border-border/30"
         >
           <div className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 h-[400px] w-[400px] rounded-full bg-primary/5 blur-[160px]" />
@@ -598,7 +621,7 @@ export default function Home() {
           <div className="relative mx-auto max-w-7xl px-6">
             <div className="grid gap-12 lg:grid-cols-2 lg:gap-16 items-center">
               <AnimatedSection>
-                <p className="text-sm font-semibold tracking-wider text-primary uppercase mb-3">
+                <p id="about" className="text-sm font-semibold tracking-wider text-primary uppercase mb-3 scroll-mt-24">
                   About Nexora
                 </p>
                 <h2 className="text-3xl font-bold tracking-tight sm:text-4xl mb-6">
@@ -700,20 +723,19 @@ export default function Home() {
         <div className="mx-auto max-w-7xl px-6 py-12 md:py-16">
           <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
             {/* Brand */}
-            <div className="sm:col-span-2 lg:col-span-2">
+            <div className="sm:col-span-2 lg:col-span-1">
               <Link href="/" className="inline-block mb-4">
                 <span className="text-xl font-bold bg-gradient-to-r from-primary via-purple-400 to-primary bg-clip-text text-transparent bg-[length:200%_auto]">
                   Nexora
                 </span>
               </Link>
-              <p className="text-sm text-muted-foreground max-w-sm leading-relaxed">
+              <p className="text-sm text-muted-foreground max-w-xs leading-relaxed">
                 The smart student collaboration platform. Discover teammates,
-                exchange skills, and build meaningful projects together — across
-                campuses.
+                exchange skills, and build together.
               </p>
             </div>
 
-            {/* Navigation */}
+            {/* Platform */}
             <div>
               <h3 className="text-sm font-semibold text-foreground mb-4">
                 Platform
@@ -722,6 +744,7 @@ export default function Home() {
                 {[
                   { label: "Features", href: "#features" },
                   { label: "How It Works", href: "#how-it-works" },
+                  { label: "Events", href: "#events" },
                   { label: "About", href: "#about" },
                 ].map((link) => (
                   <li key={link.label}>
@@ -736,7 +759,30 @@ export default function Home() {
               </ul>
             </div>
 
-            {/* Auth */}
+            {/* Explore */}
+            <div>
+              <h3 className="text-sm font-semibold text-foreground mb-4">
+                Explore
+              </h3>
+              <ul className="space-y-2.5">
+                {[
+                  { label: "Skill Exchange", href: "#features" },
+                  { label: "Communities", href: "#communities" },
+                  { label: "Find Teammates", href: "#features" },
+                ].map((link) => (
+                  <li key={link.label}>
+                    <a
+                      href={link.href}
+                      className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {link.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Get Started */}
             <div>
               <h3 className="text-sm font-semibold text-foreground mb-4">
                 Get Started
