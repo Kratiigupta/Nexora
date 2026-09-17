@@ -1,8 +1,13 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Search, UserPlus, Users, GraduationCap, Star } from "lucide-react";
+import { Search, UserPlus, Users, GraduationCap, Star, Check, Clock, Loader2 } from "lucide-react";
 import { profileService } from "@/lib/services/profile.service";
+import {
+  connectionService,
+  type AllConnectionsResponse,
+} from "@/lib/services/connection.service";
+import { useAuthStore } from "@/stores/authStore";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -12,20 +17,54 @@ import { Badge } from "@/components/ui/badge";
 import type { TeammateRecommendation } from "@/types/dashboard";
 import Link from "next/link";
 import { getInitials } from "@/lib/utils";
+import { toast } from "sonner";
+
+type ConnectionStatus = "none" | "pending_sent" | "pending_received" | "connected";
+
+/**
+ * Build a map of userId → connection status from the getAllConnections response.
+ * This avoids making one API call per student.
+ */
+function buildConnectionStatusMap(
+  data: AllConnectionsResponse
+): Map<string, ConnectionStatus> {
+  const map = new Map<string, ConnectionStatus>();
+
+  for (const c of data.connections) {
+    map.set(c.user.id, "connected");
+  }
+  for (const c of data.outgoingRequests) {
+    map.set(c.user.id, "pending_sent");
+  }
+  for (const c of data.incomingRequests) {
+    map.set(c.user.id, "pending_received");
+  }
+
+  return map;
+}
 
 export default function DiscoverStudentsPage() {
+  const { profile: myProfile } = useAuthStore();
   const [students, setStudents] = useState<TeammateRecommendation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Connection status map — derived once from a single API call
+  const [statusMap, setStatusMap] = useState<Map<string, ConnectionStatus>>(new Map());
+  const [connectingIds, setConnectingIds] = useState<Set<string>>(new Set());
+
   const fetchData = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
-      // The backend returns recommended teammates based on a scoring algorithm
-      const data = await profileService.getRecommendedTeammates();
-      setStudents(data);
+      // Fetch both in parallel — single request for all connections
+      const [studentsData, connectionsData] = await Promise.all([
+        profileService.getRecommendedTeammates(),
+        connectionService.getAllConnections(),
+      ]);
+      setStudents(studentsData);
+      setStatusMap(buildConnectionStatusMap(connectionsData));
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } } };
       setError(e.response?.data?.message || "Failed to load students.");
@@ -39,13 +78,117 @@ export default function DiscoverStudentsPage() {
     void fetchData();
   }, [fetchData]);
 
+  const handleConnect = async (studentId: string) => {
+    setConnectingIds((prev) => new Set(prev).add(studentId));
+    try {
+      await connectionService.sendConnectionRequest(studentId);
+      // Update local status map immediately — no page reload needed
+      setStatusMap((prev) => {
+        const next = new Map(prev);
+        next.set(studentId, "pending_sent");
+        return next;
+      });
+      toast.success("Connection request sent!");
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } };
+      // If the server says already pending/connected, sync local state
+      if (e.response?.data?.message?.toLowerCase().includes("already")) {
+        toast.info(e.response.data.message);
+      } else {
+        toast.error("Failed to send connection request");
+      }
+    } finally {
+      setConnectingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(studentId);
+        return next;
+      });
+    }
+  };
+
+  const handleAccept = async (studentId: string) => {
+    setConnectingIds((prev) => new Set(prev).add(studentId));
+    try {
+      await connectionService.updateConnectionStatus(studentId, "accepted");
+      setStatusMap((prev) => {
+        const next = new Map(prev);
+        next.set(studentId, "connected");
+        return next;
+      });
+      toast.success("Connection accepted!");
+    } catch {
+      toast.error("Failed to accept request");
+    } finally {
+      setConnectingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(studentId);
+        return next;
+      });
+    }
+  };
+
   // Client-side filtering for the search input since the endpoint doesn't accept a search query yet
-  const filteredStudents = students.filter(student => 
+  const filteredStudents = students.filter(student =>
     student.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
     student.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
     student.skills.some(skill => skill.toLowerCase().includes(searchQuery.toLowerCase())) ||
     student.department?.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  // Filter out the current user from the list
+  const displayStudents = myProfile
+    ? filteredStudents.filter((s) => s.id !== myProfile.id)
+    : filteredStudents;
+
+  const renderConnectButton = (student: TeammateRecommendation) => {
+    const status = statusMap.get(student.id) || "none";
+    const isConnecting = connectingIds.has(student.id);
+
+    if (isConnecting) {
+      return (
+        <Button variant="outline" size="icon" disabled>
+          <Loader2 className="h-4 w-4 animate-spin" />
+        </Button>
+      );
+    }
+
+    switch (status) {
+      case "connected":
+        return (
+          <Button variant="secondary" size="icon" title="Connected" disabled>
+            <Check className="h-4 w-4" />
+          </Button>
+        );
+      case "pending_sent":
+        return (
+          <Button variant="secondary" size="icon" title="Request Sent" disabled>
+            <Clock className="h-4 w-4" />
+          </Button>
+        );
+      case "pending_received":
+        return (
+          <Button
+            variant="default"
+            size="icon"
+            title="Accept Request"
+            onClick={() => handleAccept(student.id)}
+          >
+            <UserPlus className="h-4 w-4" />
+          </Button>
+        );
+      default:
+        return (
+          <Button
+            variant="outline"
+            size="icon"
+            title="Connect"
+            onClick={() => handleConnect(student.id)}
+          >
+            <UserPlus className="h-4 w-4" />
+          </Button>
+        );
+    }
+  };
 
   return (
     <div className="flex-1 space-y-6 p-6">
@@ -99,9 +242,9 @@ export default function DiscoverStudentsPage() {
             </Card>
           ))}
         </div>
-      ) : filteredStudents.length > 0 ? (
+      ) : displayStudents.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredStudents.map((student) => (
+          {displayStudents.map((student) => (
             <Card key={student.id} className="overflow-hidden border shadow-sm flex flex-col h-full hover:shadow-md transition-all group">
               <CardContent className="p-5 flex flex-col items-center text-center flex-1">
                 <div className="relative mb-3">
@@ -115,7 +258,7 @@ export default function DiscoverStudentsPage() {
                     <div className="bg-green-500 h-3 w-3 rounded-full" title="Available for team" />
                   </div>
                 </div>
-                
+
                 <h3 className="font-bold text-lg leading-tight truncate w-full">{student.fullName}</h3>
                 <p className="text-sm text-muted-foreground truncate w-full mb-3">@{student.username}</p>
 
@@ -132,7 +275,7 @@ export default function DiscoverStudentsPage() {
                     <span>{student.matchReasons[0]}</span>
                   </div>
                 )}
-                
+
                 <div className="flex flex-wrap gap-1.5 justify-center mt-auto mb-5 w-full">
                   {student.skills.slice(0, 3).map((skill, idx) => (
                     <Badge key={idx} variant="secondary" className="text-[10px] font-normal px-1.5 py-0">
@@ -150,15 +293,13 @@ export default function DiscoverStudentsPage() {
                 </div>
 
                 <div className="flex gap-2 w-full mt-auto">
-                  <Link 
+                  <Link
                     href={`/profile/${student.username}`}
                     className={`flex-1 ${buttonVariants({ variant: "default" })}`}
                   >
                     View Profile
                   </Link>
-                  <Button variant="outline" size="icon" title="Connect">
-                    <UserPlus className="h-4 w-4" />
-                  </Button>
+                  {renderConnectButton(student)}
                 </div>
               </CardContent>
             </Card>
@@ -171,7 +312,7 @@ export default function DiscoverStudentsPage() {
           </div>
           <h3 className="text-lg font-semibold">No students found</h3>
           <p className="text-muted-foreground mt-2 max-w-md">
-            {searchQuery 
+            {searchQuery
               ? "No students match your filter criteria. Try adjusting your search."
               : "We couldn't find any recommended teammates at the moment. Update your profile skills to get better matches."}
           </p>

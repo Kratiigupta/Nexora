@@ -3,6 +3,7 @@ import { validate } from "../middleware/validate";
 import { asyncHandler } from "../utils/asyncHandler";
 import { userIdParamSchema, updateConnectionBodySchema } from "../schemas/connection.schema";
 import {
+  getAllConnections,
   getConnectionStatus,
   sendConnectionRequest,
   updateConnectionStatus,
@@ -15,6 +16,11 @@ const router = Router();
  * Connection Routes
  * Base: /api/v1/connections (auth applied at index.ts level)
  */
+
+router.get(
+  "/",
+  asyncHandler(getAllConnections)
+);
 
 router.get(
   "/:userId/status",

@@ -10,7 +10,37 @@ export interface ConnectionStatusResponse {
   };
 }
 
+export interface ConnectionUser {
+  id: string;
+  fullName: string;
+  username: string;
+  avatarUrl: string | null;
+  department: string;
+  year: number;
+}
+
+export interface ConnectionListItem {
+  id: string;
+  status: string;
+  createdAt: string;
+  user: ConnectionUser;
+}
+
+export interface AllConnectionsResponse {
+  connections: ConnectionListItem[];
+  incomingRequests: ConnectionListItem[];
+  outgoingRequests: ConnectionListItem[];
+}
+
 export const connectionService = {
+  /**
+   * GET /api/v1/connections
+   */
+  async getAllConnections(): Promise<AllConnectionsResponse> {
+    const response = await api.get("/connections");
+    return response.data.data;
+  },
+
   /**
    * GET /api/v1/connections/:userId/status
    */

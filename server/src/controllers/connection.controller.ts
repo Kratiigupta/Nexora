@@ -248,3 +248,76 @@ export const removeConnection = async (
     next(error);
   }
 };
+
+/**
+ * GET /api/v1/connections
+ * Get all connections for the authenticated user.
+ * Returns categorized arrays: connections, incomingRequests, outgoingRequests.
+ * Strictly scoped to req.user.id.
+ */
+export const getAllConnections = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const currentUserId = req.user!.id;
+
+    // Profile fields to include for the "other" user
+    const profileSelect = {
+      id: true,
+      fullName: true,
+      username: true,
+      avatarUrl: true,
+      department: true,
+      year: true,
+    };
+
+    // Fetch all connections where the current user is either requester or receiver
+    const allConnections = await prisma.userConnection.findMany({
+      where: {
+        OR: [
+          { requesterId: currentUserId },
+          { receiverId: currentUserId },
+        ],
+      },
+      include: {
+        requester: { select: profileSelect },
+        receiver: { select: profileSelect },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    // Categorize and attach the "other" user's profile
+    const connections = allConnections
+      .filter((c) => c.status === "accepted")
+      .map((c) => ({
+        id: c.id,
+        status: c.status,
+        createdAt: c.createdAt,
+        user: c.requesterId === currentUserId ? c.receiver : c.requester,
+      }));
+
+    const incomingRequests = allConnections
+      .filter((c) => c.status === "pending" && c.receiverId === currentUserId)
+      .map((c) => ({
+        id: c.id,
+        status: c.status,
+        createdAt: c.createdAt,
+        user: c.requester,
+      }));
+
+    const outgoingRequests = allConnections
+      .filter((c) => c.status === "pending" && c.requesterId === currentUserId)
+      .map((c) => ({
+        id: c.id,
+        status: c.status,
+        createdAt: c.createdAt,
+        user: c.receiver,
+      }));
+
+    sendSuccess(res, { connections, incomingRequests, outgoingRequests });
+  } catch (error) {
+    next(error);
+  }
+};
