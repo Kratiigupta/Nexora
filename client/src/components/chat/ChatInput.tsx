@@ -1,21 +1,43 @@
-import React, { useState, useRef, KeyboardEvent } from "react";
+import React, { useState, useRef, KeyboardEvent, useEffect, useCallback } from "react";
 import { Send, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
 interface ChatInputProps {
   onSendMessage: (content: string) => Promise<void>;
+  onTypingStart?: () => void;
+  onTypingStop?: () => void;
   disabled?: boolean;
 }
 
-export function ChatInput({ onSendMessage, disabled = false }: ChatInputProps) {
+export function ChatInput({ onSendMessage, onTypingStart, onTypingStop, disabled = false }: ChatInputProps) {
   const [content, setContent] = useState("");
   const [isSending, setIsSending] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isTypingRef = useRef(false);
+
+  const stopTyping = useCallback(() => {
+    if (isTypingRef.current) {
+      isTypingRef.current = false;
+      onTypingStop?.();
+    }
+  }, [onTypingStop]);
+
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      stopTyping();
+    };
+  }, [stopTyping]);
+
   const handleSend = async () => {
     const trimmed = content.trim();
     if (!trimmed || isSending || disabled) return;
+
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    stopTyping();
 
     setIsSending(true);
     try {
@@ -41,12 +63,27 @@ export function ChatInput({ onSendMessage, disabled = false }: ChatInputProps) {
 
   const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setContent(e.target.value);
-    
+
     // Auto-resize textarea
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
       textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
     }
+
+    if (!isTypingRef.current) {
+      isTypingRef.current = true;
+      onTypingStart?.();
+    }
+
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    typingTimeoutRef.current = setTimeout(() => {
+      stopTyping();
+    }, 2000);
+  };
+
+  const handleBlur = () => {
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    stopTyping();
   };
 
   return (
@@ -56,13 +93,14 @@ export function ChatInput({ onSendMessage, disabled = false }: ChatInputProps) {
         value={content}
         onChange={handleInput}
         onKeyDown={handleKeyDown}
+        onBlur={handleBlur}
         placeholder="Type a message..."
         className="min-h-[44px] max-h-[120px] resize-none overflow-y-auto"
         disabled={disabled || isSending}
         rows={1}
       />
-      <Button 
-        onClick={handleSend} 
+      <Button
+        onClick={handleSend}
         disabled={!content.trim() || disabled || isSending}
         size="icon"
         className="h-[44px] w-[44px] shrink-0"

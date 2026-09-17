@@ -1,6 +1,7 @@
 import React from "react";
 import { Conversation } from "@/types/chat";
 import { useAuthStore } from "@/stores/authStore";
+import { useChatStore } from "@/stores/chatStore";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 
@@ -12,6 +13,7 @@ interface ConversationListProps {
 
 export function ConversationList({ conversations, activeId, onSelect }: ConversationListProps) {
   const { profile } = useAuthStore();
+  const { onlineUsers } = useChatStore();
   const currentUserId = profile?.id;
 
   if (conversations.length === 0) {
@@ -40,6 +42,7 @@ export function ConversationList({ conversations, activeId, onSelect }: Conversa
         let title = "Unknown Conversation";
         let avatarUrl: string | undefined = undefined;
         let isUnread = false;
+        let isOnline = false;
         
         // Determine title and avatar based on type
         if (conversation.type === "direct") {
@@ -47,8 +50,9 @@ export function ConversationList({ conversations, activeId, onSelect }: Conversa
           title = otherParticipant?.user?.fullName || "Unknown User";
           avatarUrl = otherParticipant?.user?.avatarUrl || undefined;
           
-          // Check unread state if we track lastReadAt (Optional depending on exact DB behavior, we will infer from messages if needed)
-          // The backend updates lastReadAt when we open.
+          if (otherParticipant && onlineUsers.has(otherParticipant.userId)) {
+            isOnline = true;
+          }
         } else if (conversation.type === "team") {
           title = conversation.team?.name || "Team Chat";
           avatarUrl = conversation.team?.avatarUrl || undefined;
@@ -58,13 +62,11 @@ export function ConversationList({ conversations, activeId, onSelect }: Conversa
 
         const lastMsg = conversation.messages?.[0] || conversation.lastMessage;
         
-        // Simple unread check (if last message isn't ours and we haven't seen it recently - we'll just bold if it exists and isn't ours for now, assuming standard logic)
-        // Since we don't have perfect lastReadAt exposed nicely on the root level here without finding our participant record:
         const myParticipant = conversation.participants?.find((p) => p.userId === currentUserId);
         if (lastMsg && myParticipant && myParticipant.lastReadAt) {
           isUnread = new Date(lastMsg.createdAt) > new Date(myParticipant.lastReadAt) && lastMsg.senderId !== currentUserId;
         } else if (lastMsg && lastMsg.senderId !== currentUserId) {
-          isUnread = true; // Fallback if lastReadAt is missing
+          isUnread = true;
         }
 
         const isActive = activeId === conversation.id;
@@ -78,12 +80,17 @@ export function ConversationList({ conversations, activeId, onSelect }: Conversa
               isActive ? "bg-muted" : "hover:bg-muted/50"
             )}
           >
-            <Avatar className="h-10 w-10 border shrink-0">
-              <AvatarImage src={avatarUrl} />
-              <AvatarFallback className="bg-primary/5 text-primary">
-                {title.substring(0, 2).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
+            <div className="relative">
+              <Avatar className="h-10 w-10 border shrink-0">
+                <AvatarImage src={avatarUrl} />
+                <AvatarFallback className="bg-primary/5 text-primary">
+                  {title.substring(0, 2).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              {isOnline && (
+                <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 border-2 border-background" />
+              )}
+            </div>
 
             <div className="flex flex-col flex-1 min-w-0">
               <div className="flex justify-between items-baseline mb-0.5">

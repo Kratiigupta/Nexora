@@ -15,7 +15,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const { socket, connect, disconnect } = useSocket();
   const { addNotification } = useNotificationStore();
-  const { addMessage } = useChatStore();
+  const { addMessage, setOnlineUsers, addOnlineUser, removeOnlineUser } = useChatStore();
 
   useEffect(() => {
     if (user) {
@@ -43,11 +43,27 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       addMessage(message);
     });
 
+    // Listen for presence
+    socket.on("presence_state", ({ onlineUsers }: { onlineUsers: string[] }) => {
+      setOnlineUsers(onlineUsers);
+    });
+
+    socket.on("user_online", ({ userId }: { userId: string }) => {
+      addOnlineUser(userId);
+    });
+
+    socket.on("user_offline", ({ userId }: { userId: string }) => {
+      removeOnlineUser(userId);
+    });
+
     return () => {
       socket.off("notification");
       socket.off("new_message");
+      socket.off("presence_state");
+      socket.off("user_online");
+      socket.off("user_offline");
     };
-  }, [socket, addNotification, addMessage]);
+  }, [socket, addNotification, addMessage, setOnlineUsers, addOnlineUser, removeOnlineUser]);
 
   return <>{children}</>;
 }

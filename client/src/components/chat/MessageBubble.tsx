@@ -2,14 +2,16 @@ import React from "react";
 import { Message } from "@/types/chat";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
+import { Check, CheckCheck } from "lucide-react";
 
 interface MessageBubbleProps {
   message: Message;
   isOwnMessage: boolean;
   showAvatar?: boolean;
+  isRead?: boolean;
 }
 
-export function MessageBubble({ message, isOwnMessage, showAvatar = true }: MessageBubbleProps) {
+export function MessageBubble({ message, isOwnMessage, showAvatar = true, isRead = false }: MessageBubbleProps) {
   const isSystem = message.type === "system";
 
   if (isSystem) {
@@ -74,9 +76,12 @@ export function MessageBubble({ message, isOwnMessage, showAvatar = true }: Mess
           )}
         </div>
         
-        <span className="text-[10px] text-muted-foreground mt-1 mx-1">
-          {new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-        </span>
+        <div className="flex items-center gap-1 mt-1 mx-1 text-[10px] text-muted-foreground">
+          <span>{new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+          {isOwnMessage && (
+            isRead ? <CheckCheck className="h-3 w-3 text-primary" /> : <Check className="h-3 w-3" />
+          )}
+        </div>
       </div>
     </div>
   );

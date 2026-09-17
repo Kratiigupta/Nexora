@@ -6,6 +6,15 @@ import { prisma } from "./prisma";
 
 let io: Server;
 
+const onlineUsersMap = new Map<string, number>();
+
+/**
+ * Get currently online user IDs.
+ */
+export const getOnlineUsers = (): string[] => {
+  return Array.from(onlineUsersMap.keys());
+};
+
 /**
  * Initialize Socket.IO server attached to the HTTP server.
  * Handles authentication via Supabase JWT on connection.
@@ -53,8 +62,18 @@ export const initializeSocket = (httpServer: HttpServer): Server => {
     const userId = (socket as any).userId;
     console.log(`🔌 User connected: ${userId} (socket: ${socket.id})`);
 
+    // Track presence
+    const count = onlineUsersMap.get(userId) || 0;
+    onlineUsersMap.set(userId, count + 1);
+    if (count === 0) {
+      io.emit("user_online", { userId });
+    }
+
     // Join user's personal room for direct notifications
     socket.join(`user:${userId}`);
+
+    // Provide initial online users state to this newly connected client
+    socket.emit("presence_state", { onlineUsers: Array.from(onlineUsersMap.keys()) });
 
     // Handle joining conversation rooms safely
     socket.on("join_room", async (roomId: string) => {
@@ -103,14 +122,34 @@ export const initializeSocket = (httpServer: HttpServer): Server => {
       console.log(`📤 ${userId} left room: ${roomId}`);
     });
 
+    // Handle typing events securely
+    socket.on("typing_start", (conversationId: string) => {
+      // Must be in the room to broadcast to it (join_room handled authorization)
+      if (socket.rooms.has(conversationId)) {
+        socket.to(conversationId).emit("typing_start", { conversationId, userId });
+      }
+    });
+
+    socket.on("typing_stop", (conversationId: string) => {
+      if (socket.rooms.has(conversationId)) {
+        socket.to(conversationId).emit("typing_stop", { conversationId, userId });
+      }
+    });
+
     // Handle disconnect
     socket.on("disconnect", (reason: string) => {
       console.log(`🔌 User disconnected: ${userId} (reason: ${reason})`);
-      io.emit("user_offline", { userId });
+      const currentCount = onlineUsersMap.get(userId) || 0;
+      if (currentCount > 0) {
+        const newCount = currentCount - 1;
+        if (newCount === 0) {
+          onlineUsersMap.delete(userId);
+          io.emit("user_offline", { userId });
+        } else {
+          onlineUsersMap.set(userId, newCount);
+        }
+      }
     });
-
-    // Broadcast that user is online
-    io.emit("user_online", { userId });
   });
 
   console.log("✅ Socket.IO initialized");

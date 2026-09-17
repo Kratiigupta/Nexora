@@ -392,6 +392,8 @@ export const markAsRead = async (
 
     await getAuthorizedConversation(conversationId, userId);
 
+    const readAt = new Date();
+
     await prisma.conversationParticipant.upsert({
       where: {
         conversationId_userId: {
@@ -399,13 +401,23 @@ export const markAsRead = async (
           userId,
         },
       },
-      update: { lastReadAt: new Date() },
+      update: { lastReadAt: readAt },
       create: {
         conversationId,
         userId,
-        lastReadAt: new Date(),
+        lastReadAt: readAt,
       },
     });
+
+    try {
+      getIO().to(conversationId).emit("conversation_read", {
+        conversationId,
+        userId,
+        readAt,
+      });
+    } catch (e) {
+      logger.warn("Failed to emit conversation_read", e);
+    }
 
     sendSuccess(res, { success: true });
   } catch (error) {
