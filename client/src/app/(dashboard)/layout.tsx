@@ -44,6 +44,7 @@ import {
   UserPlus,
   Info,
   ArrowRight,
+  UserCog,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import type { Profile } from "@/types/user";
@@ -429,8 +430,12 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                     My Profile
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => router.push("/profile/edit")}>
-                    <Settings className="mr-2 h-4 w-4" />
+                    <UserCog className="mr-2 h-4 w-4" />
                     Edit Profile
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => router.push("/settings")}>
+                    <Settings className="mr-2 h-4 w-4" />
+                    Settings
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleLogout} className="text-destructive">
