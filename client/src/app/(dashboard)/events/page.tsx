@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Search, Calendar, MapPin, Globe, ExternalLink, Bookmark } from "lucide-react";
+import { Search, Calendar, MapPin, Globe, ExternalLink, Bookmark, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { eventService } from "@/lib/services/event.service";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { Event } from "@/types/event";
 import Image from "next/image";
+import Link from "next/link";
 
 export default function EventsPage() {
   const [events, setEvents] = useState<Event[]>([]);
@@ -84,13 +85,17 @@ export default function EventsPage() {
 
   return (
     <div className="flex-1 space-y-6 p-6">
-      <div className="flex justify-between items-end">
+      <div className="flex justify-between items-start md:items-end flex-col md:flex-row gap-4">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Events</h2>
           <p className="text-muted-foreground mt-1">
             Discover hackathons, workshops, and meetups to grow your skills.
           </p>
         </div>
+        <Link href="/events/create" className={buttonVariants({ variant: "default" })}>
+          <Plus className="h-4 w-4 mr-2" />
+          Create Event
+        </Link>
       </div>
 
       <div className="flex flex-col md:flex-row gap-4 items-center">
@@ -164,81 +169,84 @@ export default function EventsPage() {
             const isUpcoming = new Date(event.startDate) > new Date();
 
             return (
-              <Card key={event.id} className="overflow-hidden border shadow-sm flex flex-col h-full hover:shadow-md transition-shadow">
-                {event.bannerUrl ? (
-                  <div className="relative h-40 w-full overflow-hidden bg-muted">
-                    <Image src={event.bannerUrl} alt={event.title} fill className="object-cover" sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" />
-                  </div>
-                ) : (
-                  <div className="h-40 w-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border-b">
-                    <Calendar className="h-12 w-12 text-primary/30" />
-                  </div>
-                )}
-                
-                <CardContent className="p-5 flex flex-col flex-1">
-                  <div className="flex justify-between items-start mb-2 gap-2">
-                    <h3 className="font-bold text-lg leading-tight line-clamp-2">{event.title}</h3>
-                    <span className="shrink-0 inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize bg-primary/10 text-primary">
-                      {event.type}
-                    </span>
-                  </div>
-                  
-                  <p className="text-sm text-muted-foreground line-clamp-2 mb-4 flex-1">
-                    {event.description}
-                  </p>
-
-                  <div className="space-y-2 mb-4 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 shrink-0" />
-                      <span>{new Date(event.startDate).toLocaleDateString()} {isUpcoming ? "(Upcoming)" : "(Past)"}</span>
+              <Link key={event.id} href={`/events/${event.id}`} className="block h-full group">
+                <Card className="overflow-hidden border shadow-sm flex flex-col h-full group-hover:border-primary/50 group-hover:shadow-md transition-all">
+                  {event.bannerUrl ? (
+                    <div className="relative h-40 w-full overflow-hidden bg-muted">
+                      <Image src={event.bannerUrl} alt={event.title} fill className="object-cover" sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" />
                     </div>
-                    {(event.location || event.isOnline) && (
-                      <div className="flex items-center gap-2">
-                        {event.isOnline ? <Globe className="h-4 w-4 shrink-0" /> : <MapPin className="h-4 w-4 shrink-0" />}
-                        <span className="truncate">{event.isOnline ? "Online" : event.location}</span>
-                      </div>
-                    )}
-                  </div>
+                  ) : (
+                    <div className="h-40 w-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center border-b">
+                      <Calendar className="h-12 w-12 text-primary/30" />
+                    </div>
+                  )}
 
-                  <div className="flex items-center justify-between pt-4 border-t mt-auto">
-                    <div className="flex items-center gap-2">
-                      <Avatar className="h-6 w-6">
-                        <AvatarImage src={event.creator?.avatarUrl || undefined} />
-                        <AvatarFallback className="text-[10px]">{event.creator?.fullName?.charAt(0) || "O"}</AvatarFallback>
-                      </Avatar>
-                      <span className="text-xs text-muted-foreground truncate max-w-[100px]">
-                        {event.organizer || event.creator?.fullName || "Community"}
+                  <CardContent className="p-5 flex flex-col flex-1">
+                    <div className="flex justify-between items-start mb-2 gap-2">
+                      <h3 className="font-bold text-lg leading-tight line-clamp-2 group-hover:text-primary transition-colors">{event.title}</h3>
+                      <span className="shrink-0 inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize bg-primary/10 text-primary">
+                        {event.type}
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className={`h-8 w-8 ${event.isBookmarked ? 'text-primary' : 'text-muted-foreground'}`}
-                        onClick={() => handleBookmarkToggle(event.id, event.isBookmarked)}
-                        disabled={isProcessing}
-                      >
-                        {isProcessing ? (
-                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                        ) : (
-                          <Bookmark className={`h-4 w-4 ${event.isBookmarked ? "fill-primary" : ""}`} />
-                        )}
-                      </Button>
-                      {event.registrationUrl && (
-                        <a 
-                          href={event.registrationUrl} 
-                          target="_blank" 
-                          rel="noreferrer"
-                          className={buttonVariants({ variant: "default", size: "sm", className: "h-8 gap-1" })}
-                        >
-                          Register <ExternalLink className="h-3 w-3" />
-                        </a>
+                    <p className="text-sm text-muted-foreground line-clamp-2 mb-4 flex-1">
+                      {event.description}
+                    </p>
+
+                    <div className="space-y-2 mb-4 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 shrink-0" />
+                        <span>{new Date(event.startDate).toLocaleDateString()} {isUpcoming ? "(Upcoming)" : "(Past)"}</span>
+                      </div>
+                      {(event.location || event.isOnline) && (
+                        <div className="flex items-center gap-2">
+                          {event.isOnline ? <Globe className="h-4 w-4 shrink-0" /> : <MapPin className="h-4 w-4 shrink-0" />}
+                          <span className="truncate">{event.isOnline ? "Online" : event.location}</span>
+                        </div>
                       )}
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
+
+                    <div className="flex items-center justify-between pt-4 border-t mt-auto" onClick={(e) => e.preventDefault()}>
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-6 w-6">
+                          <AvatarImage src={event.creator?.avatarUrl || undefined} />
+                          <AvatarFallback className="text-[10px]">{event.creator?.fullName?.charAt(0) || "O"}</AvatarFallback>
+                        </Avatar>
+                        <span className="text-xs text-muted-foreground truncate max-w-[100px]">
+                          {event.organizer || event.creator?.fullName || "Community"}
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className={`h-8 w-8 ${event.isBookmarked ? 'text-primary' : 'text-muted-foreground'}`}
+                          onClick={(e) => { e.preventDefault(); handleBookmarkToggle(event.id, event.isBookmarked); }}
+                          disabled={isProcessing}
+                        >
+                          {isProcessing ? (
+                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                          ) : (
+                            <Bookmark className={`h-4 w-4 ${event.isBookmarked ? "fill-primary" : ""}`} />
+                          )}
+                        </Button>
+                        {event.registrationUrl && (
+                          <a
+                            href={event.registrationUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className={buttonVariants({ variant: "default", size: "sm", className: "h-8 gap-1" })}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            Register <ExternalLink className="h-3 w-3" />
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
             );
           })}
         </div>

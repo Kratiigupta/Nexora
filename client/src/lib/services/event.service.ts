@@ -1,6 +1,21 @@
 import api from "@/lib/api";
 import type { Event } from "@/types/event";
 
+export interface CreateEventInput {
+  title: string;
+  description: string;
+  type: string;
+  organizer?: string;
+  bannerUrl?: string;
+  location?: string;
+  isOnline: boolean;
+  registrationUrl?: string;
+  startDate: string;
+  endDate: string;
+}
+
+export type UpdateEventInput = Partial<CreateEventInput>;
+
 interface GetEventsParams {
   page?: number;
   limit?: number;
@@ -54,5 +69,31 @@ export const eventService = {
   async removeBookmark(id: string): Promise<{ bookmarked: boolean }> {
     const response = await api.delete(`/events/${id}/bookmark`);
     return response.data.data;
+  },
+
+  /**
+   * POST /api/v1/events
+   * Create a new event.
+   */
+  async createEvent(data: CreateEventInput): Promise<Event> {
+    const response = await api.post("/events", data);
+    return response.data.data;
+  },
+
+  /**
+   * PATCH /api/v1/events/:id
+   * Update a specific event.
+   */
+  async updateEvent(id: string, data: UpdateEventInput): Promise<Event> {
+    const response = await api.patch(`/events/${id}`, data);
+    return response.data.data;
+  },
+
+  /**
+   * DELETE /api/v1/events/:id
+   * Delete a specific event.
+   */
+  async deleteEvent(id: string): Promise<void> {
+    await api.delete(`/events/${id}`);
   },
 };
