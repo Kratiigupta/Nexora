@@ -1,17 +1,15 @@
 import { Router } from "express";
 
+import { getMatchInsight } from "../controllers/ai.controller";
+import { asyncHandler } from "../utils/asyncHandler";
+
 const router = Router();
 
 /**
  * AI Routes
- * POST   /api/v1/ai/recommend-teammates   — Teammate recommendations
- * POST   /api/v1/ai/recommend-projects    — Project recommendations
- * POST   /api/v1/ai/suggest-skills        — Skill suggestions
- * POST   /api/v1/ai/team-compatibility    — Team skill analysis
+ * POST   /api/v1/ai/match-insight/:candidateId   — AI Match Insight for Discover
  */
 
-router.post("/recommend-teammates", (_req, res) => {
-  res.json({ success: true, data: { message: "AI routes — not yet implemented" } });
-});
+router.post("/match-insight/:candidateId", asyncHandler(getMatchInsight));
 
 export default router;

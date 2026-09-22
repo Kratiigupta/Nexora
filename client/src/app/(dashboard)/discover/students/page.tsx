@@ -18,6 +18,7 @@ import type { TeammateRecommendation } from "@/types/dashboard";
 import Link from "next/link";
 import { getInitials } from "@/lib/utils";
 import { toast } from "sonner";
+import { AiMatchInsightButton } from "@/components/ai/AiMatchInsight";
 
 type ConnectionStatus = "none" | "pending_sent" | "pending_received" | "connected";
 
@@ -301,6 +302,8 @@ export default function DiscoverStudentsPage() {
                   </Link>
                   {renderConnectButton(student)}
                 </div>
+
+                <AiMatchInsightButton candidateId={student.id} candidateName={student.fullName} />
               </CardContent>
             </Card>
           ))}
