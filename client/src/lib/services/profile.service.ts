@@ -130,8 +130,11 @@ export const profileService = {
   /**
    * GET /api/v1/dashboard/recommended-teammates
    */
-  async getRecommendedTeammates(): Promise<import("@/types/dashboard").TeammateRecommendation[]> {
-    const response = await api.get("/dashboard/recommended-teammates");
+  async getRecommendedTeammates(params?: { search?: string; page?: number; limit?: number }): Promise<{
+    users: import("@/types/dashboard").TeammateRecommendation[];
+    pagination: { page: number; limit: number; hasNextPage: boolean };
+  }> {
+    const response = await api.get("/dashboard/recommended-teammates", { params });
     return response.data.data;
   },
 };

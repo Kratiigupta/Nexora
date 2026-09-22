@@ -40,7 +40,7 @@ export default function SkillExchangePage() {
     setLoadingMentors(true);
     try {
       const data = await profileService.getRecommendedTeammates();
-      setMentors(data);
+      setMentors(data.users);
     } catch {
       toast.error("Failed to load mentors");
     } finally {

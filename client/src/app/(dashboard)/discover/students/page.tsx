@@ -19,6 +19,7 @@ import Link from "next/link";
 import { getInitials } from "@/lib/utils";
 import { toast } from "sonner";
 import { AiMatchInsightButton } from "@/components/ai/AiMatchInsight";
+import { useDebounce } from "@/hooks/useDebounce";
 
 type ConnectionStatus = "none" | "pending_sent" | "pending_received" | "connected";
 
@@ -48,36 +49,76 @@ export default function DiscoverStudentsPage() {
   const { profile: myProfile } = useAuthStore();
   const [students, setStudents] = useState<TeammateRecommendation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearch = useDebounce(searchQuery, 300);
+  
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
 
   // Connection status map — derived once from a single API call
   const [statusMap, setStatusMap] = useState<Map<string, ConnectionStatus>>(new Map());
   const [connectingIds, setConnectingIds] = useState<Set<string>>(new Set());
 
-  const fetchData = useCallback(async () => {
-    setIsLoading(true);
+  const fetchConnections = useCallback(async () => {
+    try {
+      const connectionsData = await connectionService.getAllConnections();
+      setStatusMap(buildConnectionStatusMap(connectionsData));
+    } catch (err) {
+      console.error("Failed to load connections", err);
+    }
+  }, []);
+
+  const fetchStudents = useCallback(async (currentPage: number, search: string, isLoadMore = false) => {
+    if (!isLoadMore) {
+      setIsLoading(true);
+    } else {
+      setIsLoadingMore(true);
+    }
     setError(null);
     try {
-      // Fetch both in parallel — single request for all connections
-      const [studentsData, connectionsData] = await Promise.all([
-        profileService.getRecommendedTeammates(),
-        connectionService.getAllConnections(),
-      ]);
-      setStudents(studentsData);
-      setStatusMap(buildConnectionStatusMap(connectionsData));
+      const data = await profileService.getRecommendedTeammates({
+        search,
+        page: currentPage,
+        limit: 20
+      });
+      
+      if (isLoadMore) {
+        setStudents((prev) => [...prev, ...data.users]);
+      } else {
+        setStudents(data.users);
+      }
+      setHasMore(data.pagination.hasNextPage);
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } } };
       setError(e.response?.data?.message || "Failed to load students.");
     } finally {
       setIsLoading(false);
+      setIsLoadingMore(false);
     }
   }, []);
 
+  // Initial load of connections
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    void fetchData();
-  }, [fetchData]);
+    void fetchConnections();
+  }, [fetchConnections]);
+
+  // Load students when search or page changes
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPage(1);
+    void fetchStudents(1, debouncedSearch, false);
+  }, [debouncedSearch, fetchStudents]);
+
+  const loadMore = () => {
+    if (!hasMore || isLoadingMore) return;
+    const nextPage = page + 1;
+    setPage(nextPage);
+    void fetchStudents(nextPage, debouncedSearch, true);
+  };
 
   const handleConnect = async (studentId: string) => {
     setConnectingIds((prev) => new Set(prev).add(studentId));
@@ -128,18 +169,10 @@ export default function DiscoverStudentsPage() {
     }
   };
 
-  // Client-side filtering for the search input since the endpoint doesn't accept a search query yet
-  const filteredStudents = students.filter(student =>
-    student.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    student.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    student.skills.some(skill => skill.toLowerCase().includes(searchQuery.toLowerCase())) ||
-    student.department?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
   // Filter out the current user from the list
   const displayStudents = myProfile
-    ? filteredStudents.filter((s) => s.id !== myProfile.id)
-    : filteredStudents;
+    ? students.filter((s) => s.id !== myProfile.id)
+    : students;
 
   const renderConnectButton = (student: TeammateRecommendation) => {
     const status = statusMap.get(student.id) || "none";
@@ -217,7 +250,7 @@ export default function DiscoverStudentsPage() {
       {error && (
         <div className="bg-destructive/10 text-destructive p-4 rounded-lg flex items-center justify-between">
           <p>{error}</p>
-          <Button variant="outline" size="sm" onClick={fetchData}>Retry</Button>
+          <Button variant="outline" size="sm" onClick={() => fetchStudents(1, debouncedSearch, false)}>Retry</Button>
         </div>
       )}
 
@@ -244,9 +277,10 @@ export default function DiscoverStudentsPage() {
           ))}
         </div>
       ) : displayStudents.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {displayStudents.map((student) => (
-            <Card key={student.id} className="overflow-hidden border shadow-sm flex flex-col h-full hover:shadow-md transition-all group">
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {displayStudents.map((student) => (
+              <Card key={student.id} className="overflow-hidden border shadow-sm flex flex-col h-full hover:shadow-md transition-all group">
               <CardContent className="p-5 flex flex-col items-center text-center flex-1">
                 <div className="relative mb-3">
                   <Avatar className="h-24 w-24 border-4 border-background shadow-sm">
@@ -307,7 +341,28 @@ export default function DiscoverStudentsPage() {
               </CardContent>
             </Card>
           ))}
-        </div>
+          </div>
+
+          {hasMore && (
+            <div className="flex justify-center mt-8 mb-4">
+              <Button
+                variant="outline"
+                onClick={loadMore}
+                disabled={isLoadingMore}
+                className="w-full max-w-sm"
+              >
+                {isLoadingMore ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Loading...
+                  </>
+                ) : (
+                  "Load More"
+                )}
+              </Button>
+            </div>
+          )}
+        </>
       ) : (
         <div className="flex flex-col items-center justify-center py-20 text-center bg-card/50 border rounded-xl border-dashed">
           <div className="bg-primary/10 p-4 rounded-full mb-4">

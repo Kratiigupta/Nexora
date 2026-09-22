@@ -41,7 +41,7 @@ export function NewConversationDialog({ open, onOpenChange, onSuccess }: NewConv
         if (tab === "direct" && users.length === 0) {
           const recommended = await profileService.getRecommendedTeammates();
           // Exclude self just in case
-          setUsers(recommended.filter((u) => u.id !== profile?.id));
+          setUsers(recommended.users.filter((u) => u.id !== profile?.id));
         } else if (tab === "team" && teams.length === 0) {
           const myTeams = await teamService.getMyTeams();
           setTeams(myTeams);

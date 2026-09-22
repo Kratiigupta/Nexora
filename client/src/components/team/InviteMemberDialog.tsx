@@ -36,7 +36,7 @@ export function InviteMemberDialog({ teamId, trigger, onInviteSuccess }: InviteM
     setIsLoading(true);
     try {
       const data = await profileService.getRecommendedTeammates();
-      setRecommendations(data);
+      setRecommendations(data.users);
     } catch {
       toast.error("Failed to load recommendations");
     } finally {

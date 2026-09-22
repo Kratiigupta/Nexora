@@ -24,8 +24,8 @@ export function RecommendedTeammates({ className }: RecommendedTeammatesProps) {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await profileService.getRecommendedTeammates();
-      setTeammates(data);
+      const data = await profileService.getRecommendedTeammates({ limit: 5 }); // Since it's a dashboard widget, we just need a few
+      setTeammates(data.users);
     } catch (err) {
       console.error("Failed to load recommendations:", err);
       setError("Failed to load recommendations");

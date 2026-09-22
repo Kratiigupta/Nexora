@@ -508,6 +508,11 @@ export const getRecommendedTeammates = async (
   try {
     const userId = req.user!.id;
 
+    // Extract query parameters
+    const search = req.query.search ? String(req.query.search).trim() : "";
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string) || 20));
+
     // Fetch current user's profile and skills
     const currentUser = await prisma.profile.findUnique({
       where: { id: userId },
@@ -520,33 +525,43 @@ export const getRecommendedTeammates = async (
 
     const userSkillIds = currentUser.skills.map((s) => s.skillId);
 
-    // Build efficient OR conditions to only fetch potentially relevant candidates
-    const orConditions: any[] = [];
-    if (currentUser.department) orConditions.push({ department: currentUser.department });
-    if (currentUser.year) orConditions.push({ year: currentUser.year });
-    if (currentUser.interests && currentUser.interests.length > 0) {
-      orConditions.push({ interests: { hasSome: currentUser.interests } });
-    }
-    if (userSkillIds.length > 0) {
-      orConditions.push({ skills: { some: { skillId: { in: userSkillIds } } } });
-    }
-
     const whereClause: any = {
       id: { not: userId },
       isAvailable: true,
     };
 
-    if (orConditions.length > 0) {
-      whereClause.OR = orConditions;
+    if (search) {
+      // Use search conditions
+      whereClause.OR = [
+        { fullName: { contains: search, mode: "insensitive" } },
+        { username: { contains: search, mode: "insensitive" } },
+        { department: { contains: search, mode: "insensitive" } },
+        { skills: { some: { skill: { name: { contains: search, mode: "insensitive" } } } } }
+      ];
+    } else {
+      // Build efficient OR conditions to only fetch potentially relevant candidates
+      const orConditions: any[] = [];
+      if (currentUser.department) orConditions.push({ department: currentUser.department });
+      if (currentUser.year) orConditions.push({ year: currentUser.year });
+      if (currentUser.interests && currentUser.interests.length > 0) {
+        orConditions.push({ interests: { hasSome: currentUser.interests } });
+      }
+      if (userSkillIds.length > 0) {
+        orConditions.push({ skills: { some: { skillId: { in: userSkillIds } } } });
+      }
+
+      if (orConditions.length > 0) {
+        whereClause.OR = orConditions;
+      }
     }
 
-    // Fetch eligible candidates (bound to 100 to prevent loading the entire DB)
+    // Fetch eligible candidates (bound to 200 to prevent loading the entire DB)
     const candidates = await prisma.profile.findMany({
       where: whereClause,
       include: {
         skills: { include: { skill: true } }
       },
-      take: 100
+      take: 200
     });
 
     // Score candidates deterministically
@@ -601,8 +616,20 @@ export const getRecommendedTeammates = async (
     // Sort descending by score
     scoredCandidates.sort((a, b) => b.score - a.score);
 
-    // Return top 5
-    sendSuccess(res, scoredCandidates.slice(0, 5));
+    // Paginate
+    const start = (page - 1) * limit;
+    const end = start + limit;
+    const paginatedUsers = scoredCandidates.slice(start, end);
+    const hasNextPage = end < scoredCandidates.length;
+
+    sendSuccess(res, {
+      users: paginatedUsers,
+      pagination: {
+        page,
+        limit,
+        hasNextPage
+      }
+    });
   } catch (error) {
     next(error);
   }
