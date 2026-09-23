@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { validate } from "../middleware/validate";
-import { updateProfileBodySchema, usernameParamSchema } from "../schemas/profile.schema";
+import { updateProfileBodySchema, usernameParamSchema, fileUrlBodySchema } from "../schemas/profile.schema";
 import {
   getMyProfile,
   updateMyProfile,
@@ -34,8 +34,8 @@ router.put(
 );
 
 // File URL updates (client uploads to Supabase Storage, then sends URL here)
-router.post("/avatar", asyncHandler(uploadAvatar));
-router.post("/resume", asyncHandler(uploadResume));
+router.post("/avatar", validate({ body: fileUrlBodySchema }), asyncHandler(uploadAvatar));
+router.post("/resume", validate({ body: fileUrlBodySchema }), asyncHandler(uploadResume));
 
 // Public profile — must come after /avatar and /resume to avoid param collision
 router.get("/:username", validate({ params: usernameParamSchema }), asyncHandler(getPublicProfile));

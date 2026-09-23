@@ -2,6 +2,8 @@ import { Router } from "express";
 
 import { getMatchInsight } from "../controllers/ai.controller";
 import { asyncHandler } from "../utils/asyncHandler";
+import { validate } from "../middleware/validate";
+import { candidateIdParamSchema } from "../schemas/ai.schema";
 
 const router = Router();
 
@@ -10,6 +12,10 @@ const router = Router();
  * POST   /api/v1/ai/match-insight/:candidateId   — AI Match Insight for Discover
  */
 
-router.post("/match-insight/:candidateId", asyncHandler(getMatchInsight));
+router.post(
+  "/match-insight/:candidateId",
+  validate({ params: candidateIdParamSchema }),
+  asyncHandler(getMatchInsight)
+);
 
 export default router;

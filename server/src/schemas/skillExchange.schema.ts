@@ -15,3 +15,7 @@ export const ratingSchema = z.object({
   rating: z.number().int().min(1).max(5),
   feedback: z.string().max(1000, "Feedback too long").optional(),
 });
+
+export const sessionIdParamSchema = z.object({
+  id: z.string().uuid("Invalid session ID"),
+});

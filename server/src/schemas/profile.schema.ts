@@ -71,6 +71,12 @@ export const usernameParamSchema = z.object({
     .regex(/^[a-zA-Z0-9_-]+$/, "Invalid username format"),
 });
 
+export const fileUrlBodySchema = z.object({
+  fileUrl: z.string().url("Invalid file URL").refine((url) => url.startsWith("https://"), {
+    message: "File URL must use HTTPS",
+  }),
+});
+
 // Type exports
 export type UpdateProfileBody = z.infer<typeof updateProfileBodySchema>;
 export type UsernameParam = z.infer<typeof usernameParamSchema>;
