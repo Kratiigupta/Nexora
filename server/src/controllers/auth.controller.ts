@@ -309,3 +309,53 @@ export const completeOnboarding = async (
     next(error);
   }
 };
+
+/**
+ * DELETE /api/v1/auth/me
+ * Deletes the authenticated user's account.
+ * 1. Deletes the Profile in PostgreSQL (cascades to all related data).
+ * 2. Deletes the Supabase Auth user via admin API (service_role key).
+ */
+export const deleteAccount = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const userId = req.user!.id;
+
+    // Verify user profile exists
+    const profile = await prisma.profile.findUnique({
+      where: { id: userId },
+    });
+
+    if (!profile) {
+      throw ApiError.notFound("Profile");
+    }
+
+    // 1. Delete profile from PostgreSQL
+    // All related data (skills, team memberships, messages, etc.) will cascade-delete
+    // based on the Prisma schema's onDelete: Cascade relations.
+    await prisma.profile.delete({
+      where: { id: userId },
+    });
+
+    logger.info(`Account data deleted for user: ${profile.username} (${userId})`);
+
+    // 2. Delete Supabase Auth user
+    const { error: supabaseError } = await supabaseAdmin.auth.admin.deleteUser(userId);
+
+    if (supabaseError) {
+      // Log the error but don't fail — the profile data is already gone.
+      // The Supabase auth record will be orphaned but harmless.
+      logger.error(`Failed to delete Supabase Auth user ${userId}: ${supabaseError.message}`);
+    } else {
+      logger.info(`Supabase Auth user deleted: ${userId}`);
+    }
+
+    sendSuccess(res, null);
+  } catch (error) {
+    next(error);
+  }
+};
+

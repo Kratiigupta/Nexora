@@ -14,7 +14,9 @@ import {
   updateEvent,
   deleteEvent,
   bookmarkEvent,
-  removeBookmark
+  removeBookmark,
+  registerForEvent,
+  cancelRegistration
 } from "../controllers/event.controller";
 
 const router = Router();
@@ -73,4 +75,19 @@ router.delete(
   asyncHandler(removeBookmark)
 );
 
+// POST /api/v1/events/:id/register — RSVP for an event
+router.post(
+  "/:id/register",
+  validate({ params: eventIdParamSchema }),
+  asyncHandler(registerForEvent)
+);
+
+// DELETE /api/v1/events/:id/register — Cancel RSVP
+router.delete(
+  "/:id/register",
+  validate({ params: eventIdParamSchema }),
+  asyncHandler(cancelRegistration)
+);
+
 export default router;
+

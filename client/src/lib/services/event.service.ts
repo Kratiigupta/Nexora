@@ -96,4 +96,22 @@ export const eventService = {
   async deleteEvent(id: string): Promise<void> {
     await api.delete(`/events/${id}`);
   },
+
+  /**
+   * POST /api/v1/events/:id/register
+   * RSVP / register for an event.
+   */
+  async registerForEvent(id: string): Promise<{ registered: boolean }> {
+    const response = await api.post(`/events/${id}/register`);
+    return response.data.data;
+  },
+
+  /**
+   * DELETE /api/v1/events/:id/register
+   * Cancel RSVP / registration for an event.
+   */
+  async cancelRegistration(id: string): Promise<{ registered: boolean }> {
+    const response = await api.delete(`/events/${id}/register`);
+    return response.data.data;
+  },
 };

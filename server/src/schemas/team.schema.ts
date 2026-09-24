@@ -30,3 +30,7 @@ export const teamAndRequestIdParamSchema = z.object({
   id: z.string().uuid("Invalid team ID"),
   requestId: z.string().uuid("Invalid request ID"),
 });
+
+export const updateRequiredSkillsSchema = z.object({
+  skillIds: z.array(z.string().uuid("Invalid skill ID")).max(20, "Maximum 20 required skills allowed"),
+});

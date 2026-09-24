@@ -11,6 +11,7 @@ import {
   getMe,
   updateMe,
   completeOnboarding,
+  deleteAccount,
 } from "../controllers/auth.controller";
 import { asyncHandler } from "../utils/asyncHandler";
 import { authRateLimiter } from "../middleware/rateLimiter";
@@ -19,10 +20,11 @@ const router = Router();
 
 /**
  * Auth Routes
- * POST /api/v1/auth/register     — Create profile after Supabase signup (public)
- * GET  /api/v1/auth/me            — Get current user profile (auto-creates if missing)
- * PUT  /api/v1/auth/me            — Update current user profile
- * POST /api/v1/auth/onboarding   — Complete onboarding (bio, skills, links)
+ * POST   /api/v1/auth/register     — Create profile after Supabase signup (public)
+ * GET    /api/v1/auth/me            — Get current user profile (auto-creates if missing)
+ * PUT    /api/v1/auth/me            — Update current user profile
+ * DELETE /api/v1/auth/me            — Delete current user account
+ * POST   /api/v1/auth/onboarding   — Complete onboarding (bio, skills, links)
  */
 
 // Public — called immediately after Supabase signup
@@ -42,5 +44,8 @@ router.post(
   validate({ body: onboardingSchema.shape.body }),
   asyncHandler(completeOnboarding)
 );
+
+// Account deletion — requires valid JWT, uses user ID from token
+router.delete("/me", authMiddleware, asyncHandler(deleteAccount));
 
 export default router;

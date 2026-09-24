@@ -44,4 +44,14 @@ export const teamService = {
     const response = await api.get("/teams/invitations");
     return response.data.data;
   },
+
+  async updateRequiredSkills(teamId: string, skillIds: string[]): Promise<Team> {
+    const response = await api.put(`/teams/${teamId}/required-skills`, { skillIds });
+    return response.data.data;
+  },
+
+  async getAllSkills(): Promise<{ id: string; name: string; category: string }[]> {
+    const response = await api.get("/teams/skills");
+    return response.data.data;
+  },
 };

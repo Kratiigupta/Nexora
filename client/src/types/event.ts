@@ -17,6 +17,7 @@ export interface Event {
   createdBy: string;
   createdAt: string;
   isBookmarked?: boolean;
+  isRegistered?: boolean;
   creator?: {
     id: string;
     fullName: string;
@@ -25,5 +26,6 @@ export interface Event {
   };
   _count?: {
     bookmarks: number;
+    registrations: number;
   };
 }

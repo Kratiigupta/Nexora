@@ -8,6 +8,7 @@ import {
   teamIdParamSchema,
   teamAndUserIdParamSchema,
   teamAndRequestIdParamSchema,
+  updateRequiredSkillsSchema,
 } from "../schemas/team.schema";
 import {
   createTeam,
@@ -18,6 +19,8 @@ import {
   leaveTeam,
   removeMember,
   getMyInvitations,
+  updateRequiredSkills,
+  getAllSkills,
 } from "../controllers/team.controller";
 
 const router = Router();
@@ -40,6 +43,9 @@ router.get("/my-teams", asyncHandler(getMyTeams));
 // GET /api/v1/teams/invitations — Get current user's pending invitations
 router.get("/invitations", asyncHandler(getMyInvitations));
 
+// GET /api/v1/teams/skills — Get master skill catalog
+router.get("/skills", asyncHandler(getAllSkills));
+
 // GET /api/v1/teams/:id — Get team details
 router.get(
   "/:id",
@@ -61,6 +67,13 @@ router.post(
   asyncHandler(respondToInvite)
 );
 
+// PUT /api/v1/teams/:id/required-skills — Update team required skills
+router.put(
+  "/:id/required-skills",
+  validate({ params: teamIdParamSchema, body: updateRequiredSkillsSchema }),
+  asyncHandler(updateRequiredSkills)
+);
+
 // DELETE /api/v1/teams/:id/leave — Leave team
 router.delete(
   "/:id/leave",
@@ -76,3 +89,4 @@ router.delete(
 );
 
 export default router;
+

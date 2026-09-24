@@ -408,3 +408,95 @@ export const getMyInvitations = async (
     next(error);
   }
 };
+
+/**
+ * PUT /api/v1/teams/:id/required-skills
+ * Set the required skills for a team (replaces existing set).
+ * Only team owners and admins can modify required skills.
+ */
+export const updateRequiredSkills = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const teamId = req.params.id as string;
+    const userId = req.user!.id;
+    const { skillIds } = req.body as { skillIds: string[] };
+
+    // Verify team exists
+    const team = await prisma.team.findUnique({ where: { id: teamId } });
+    if (!team) throw ApiError.notFound("Team");
+
+    // Verify user is owner or admin
+    const membership = await prisma.teamMember.findUnique({
+      where: { teamId_userId: { teamId, userId } },
+    });
+
+    if (!membership || (membership.role !== TeamMemberRole.owner && membership.role !== TeamMemberRole.admin)) {
+      throw ApiError.forbidden("Only team owners or admins can manage required skills");
+    }
+
+    // Remove duplicates from input
+    const uniqueSkillIds = [...new Set(skillIds)];
+
+    // Verify all skill IDs exist
+    if (uniqueSkillIds.length > 0) {
+      const existingSkills = await prisma.skill.findMany({
+        where: { id: { in: uniqueSkillIds } },
+        select: { id: true },
+      });
+
+      if (existingSkills.length !== uniqueSkillIds.length) {
+        throw ApiError.badRequest("One or more skill IDs are invalid");
+      }
+    }
+
+    // Replace all required skills: delete existing, create new
+    await prisma.teamRequiredSkill.deleteMany({ where: { teamId } });
+
+    if (uniqueSkillIds.length > 0) {
+      await prisma.teamRequiredSkill.createMany({
+        data: uniqueSkillIds.map((skillId) => ({
+          teamId,
+          skillId,
+        })),
+      });
+    }
+
+    // Return updated team with required skills
+    const updatedTeam = await prisma.team.findUnique({
+      where: { id: teamId },
+      include: {
+        requiredSkills: { include: { skill: true } },
+        members: {
+          include: { user: { select: { id: true, fullName: true, username: true, avatarUrl: true } } },
+        },
+      },
+    });
+
+    sendSuccess(res, updatedTeam);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /api/v1/teams/skills
+ * Get the master skill catalog for skill selection.
+ */
+export const getAllSkills = async (
+  _req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const skills = await prisma.skill.findMany({
+      orderBy: [{ category: "asc" }, { name: "asc" }],
+    });
+
+    sendSuccess(res, skills);
+  } catch (error) {
+    next(error);
+  }
+};

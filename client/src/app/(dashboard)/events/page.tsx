@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Search, Calendar, MapPin, Globe, ExternalLink, Bookmark, Plus } from "lucide-react";
+import { Search, Calendar, MapPin, Globe, ExternalLink, Bookmark, Plus, UserCheck, UserPlus, Users } from "lucide-react";
 import { toast } from "sonner";
 import { eventService } from "@/lib/services/event.service";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -18,9 +18,10 @@ export default function EventsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterUpcoming, setFilterUpcoming] = useState<"true" | "false" | "">("");
+  const [filterUpcoming, setFilterUpcoming] = useState<"true" | "false" | "">(""); 
   const [filterType, setFilterType] = useState<string>("");
   const [processingBookmarks, setProcessingBookmarks] = useState<Set<string>>(new Set());
+  const [processingRsvps, setProcessingRsvps] = useState<Set<string>>(new Set());
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -51,20 +52,41 @@ export default function EventsPage() {
       if (isBookmarked) {
         await eventService.removeBookmark(eventId);
         toast.success("Event removed from bookmarks");
-        setEvents(prev => prev.map(e => e.id === eventId ? { ...e, _count: { bookmarks: (e._count?.bookmarks || 1) - 1 } } : e));
-        // We can't immediately toggle `isBookmarked` locally since the backend only returns it for getEventById.
-        // If we want to simulate it, we would add `isBookmarked` to the Event interface for getEvents too, but backend doesn't return it for list.
+        setEvents(prev => prev.map(e => e.id === eventId ? { ...e, isBookmarked: false, _count: { bookmarks: (e._count?.bookmarks || 1) - 1, registrations: e._count?.registrations || 0 } } : e));
       } else {
         await eventService.bookmarkEvent(eventId);
         toast.success("Event bookmarked");
-        setEvents(prev => prev.map(e => e.id === eventId ? { ...e, _count: { bookmarks: (e._count?.bookmarks || 0) + 1 } } : e));
+        setEvents(prev => prev.map(e => e.id === eventId ? { ...e, isBookmarked: true, _count: { bookmarks: (e._count?.bookmarks || 0) + 1, registrations: e._count?.registrations || 0 } } : e));
       }
-      void fetchData(); // Refresh to get accurate counts
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } } };
       toast.error(e.response?.data?.message || "Failed to update bookmark");
     } finally {
       setProcessingBookmarks(prev => {
+        const next = new Set(prev);
+        next.delete(eventId);
+        return next;
+      });
+    }
+  };
+
+  const handleRsvpToggle = async (eventId: string, isRegistered: boolean | undefined) => {
+    setProcessingRsvps(prev => new Set(prev).add(eventId));
+    try {
+      if (isRegistered) {
+        await eventService.cancelRegistration(eventId);
+        toast.success("RSVP cancelled");
+        setEvents(prev => prev.map(e => e.id === eventId ? { ...e, isRegistered: false, _count: { bookmarks: e._count?.bookmarks || 0, registrations: (e._count?.registrations || 1) - 1 } } : e));
+      } else {
+        await eventService.registerForEvent(eventId);
+        toast.success("RSVP confirmed!");
+        setEvents(prev => prev.map(e => e.id === eventId ? { ...e, isRegistered: true, _count: { bookmarks: e._count?.bookmarks || 0, registrations: (e._count?.registrations || 0) + 1 } } : e));
+      }
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } } };
+      toast.error(e.response?.data?.message || "Failed to update RSVP");
+    } finally {
+      setProcessingRsvps(prev => {
         const next = new Set(prev);
         next.delete(eventId);
         return next;
@@ -165,7 +187,8 @@ export default function EventsPage() {
       ) : events.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
           {events.map((event) => {
-            const isProcessing = processingBookmarks.has(event.id);
+            const isProcessingBookmark = processingBookmarks.has(event.id);
+            const isProcessingRsvp = processingRsvps.has(event.id);
             const isUpcoming = new Date(event.startDate) > new Date();
 
             return (
@@ -204,6 +227,12 @@ export default function EventsPage() {
                           <span className="truncate">{event.isOnline ? "Online" : event.location}</span>
                         </div>
                       )}
+                      {(event._count?.registrations ?? 0) > 0 && (
+                        <div className="flex items-center gap-2">
+                          <Users className="h-4 w-4 shrink-0" />
+                          <span>{event._count?.registrations} attendee{event._count?.registrations !== 1 ? "s" : ""}</span>
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex items-center justify-between pt-4 border-t mt-auto" onClick={(e) => e.preventDefault()}>
@@ -217,29 +246,50 @@ export default function EventsPage() {
                         </span>
                       </div>
 
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5">
+                        {/* RSVP Button */}
+                        <Button
+                          variant={event.isRegistered ? "default" : "outline"}
+                          size="sm"
+                          className={`h-8 gap-1 text-xs ${event.isRegistered ? "" : ""}`}
+                          onClick={(e) => { e.preventDefault(); handleRsvpToggle(event.id, event.isRegistered); }}
+                          disabled={isProcessingRsvp}
+                        >
+                          {isProcessingRsvp ? (
+                            <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                          ) : event.isRegistered ? (
+                            <UserCheck className="h-3.5 w-3.5" />
+                          ) : (
+                            <UserPlus className="h-3.5 w-3.5" />
+                          )}
+                          {event.isRegistered ? "RSVP'd" : "RSVP"}
+                        </Button>
+
+                        {/* Bookmark */}
                         <Button
                           variant="ghost"
                           size="icon"
                           className={`h-8 w-8 ${event.isBookmarked ? 'text-primary' : 'text-muted-foreground'}`}
                           onClick={(e) => { e.preventDefault(); handleBookmarkToggle(event.id, event.isBookmarked); }}
-                          disabled={isProcessing}
+                          disabled={isProcessingBookmark}
                         >
-                          {isProcessing ? (
+                          {isProcessingBookmark ? (
                             <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                           ) : (
                             <Bookmark className={`h-4 w-4 ${event.isBookmarked ? "fill-primary" : ""}`} />
                           )}
                         </Button>
+
+                        {/* External Registration */}
                         {event.registrationUrl && (
                           <a
                             href={event.registrationUrl}
                             target="_blank"
                             rel="noreferrer"
-                            className={buttonVariants({ variant: "default", size: "sm", className: "h-8 gap-1" })}
+                            className={buttonVariants({ variant: "secondary", size: "sm", className: "h-8 gap-1 text-xs" })}
                             onClick={(e) => e.stopPropagation()}
                           >
-                            Register <ExternalLink className="h-3 w-3" />
+                            External <ExternalLink className="h-3 w-3" />
                           </a>
                         )}
                       </div>

@@ -91,6 +91,8 @@ export const sendConnectionRequest = async (
       },
     });
 
+    let connection;
+
     if (existing) {
       if (existing.status === "accepted") {
         throw ApiError.conflict("You are already connected");
@@ -98,15 +100,37 @@ export const sendConnectionRequest = async (
       if (existing.status === "pending") {
         throw ApiError.conflict("Connection request is already pending");
       }
+      
+      // Enforce 7-day cooldown for rejected or cancelled requests
+      if (existing.status === "rejected" || existing.status === "cancelled") {
+        const cooldownDays = 7;
+        const cooldownMs = cooldownDays * 24 * 60 * 60 * 1000;
+        const timeSinceUpdate = Date.now() - new Date(existing.updatedAt).getTime();
+        
+        if (timeSinceUpdate < cooldownMs) {
+          const daysLeft = Math.ceil((cooldownMs - timeSinceUpdate) / (24 * 60 * 60 * 1000));
+          throw ApiError.conflict(`Please wait ${daysLeft} day(s) before sending another connection request`);
+        }
+        
+        // Cooldown passed, reuse the connection record
+        connection = await prisma.userConnection.update({
+          where: { id: existing.id },
+          data: {
+            requesterId: currentUserId,
+            receiverId: targetUserId,
+            status: "pending",
+          },
+        });
+      }
+    } else {
+      connection = await prisma.userConnection.create({
+        data: {
+          requesterId: currentUserId,
+          receiverId: targetUserId,
+          status: "pending",
+        },
+      });
     }
-
-    const connection = await prisma.userConnection.create({
-      data: {
-        requesterId: currentUserId,
-        receiverId: targetUserId,
-        status: "pending",
-      },
-    });
 
     // Notify the target user
     const currentUser = await prisma.profile.findUnique({ where: { id: currentUserId } });
@@ -164,8 +188,9 @@ export const updateConnectionStatus = async (
     }
 
     if (status === "rejected") {
-      await prisma.userConnection.delete({
+      await prisma.userConnection.update({
         where: { id: connection.id },
+        data: { status: "rejected" },
       });
       sendSuccess(res, { status: "none" });
       return;
@@ -239,8 +264,9 @@ export const removeConnection = async (
       throw ApiError.notFound("Connection not found");
     }
 
-    await prisma.userConnection.delete({
+    await prisma.userConnection.update({
       where: { id: connection.id },
+      data: { status: "cancelled" },
     });
 
     sendSuccess(res, { status: "none" });

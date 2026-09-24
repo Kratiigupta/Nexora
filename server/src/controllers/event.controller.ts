@@ -61,6 +61,7 @@ export const getEvents = async (
   next: NextFunction
 ): Promise<void> => {
   try {
+    const userId = req.user!.id;
     const { page, limit, type, search, upcoming } = req.query;
     
     const pageNum = Number(page) || 1;
@@ -92,7 +93,17 @@ export const getEvents = async (
         where,
         include: {
           creator: { select: { id: true, fullName: true, username: true, avatarUrl: true } },
-          _count: { select: { bookmarks: true } },
+          _count: { select: { bookmarks: true, registrations: true } },
+          // Include current user's registration to determine RSVP status in bulk
+          registrations: {
+            where: { userId },
+            select: { id: true, status: true },
+          },
+          // Include current user's bookmark status in bulk
+          bookmarks: {
+            where: { userId },
+            select: { userId: true },
+          },
         },
         orderBy: { startDate: "asc" },
         skip,
@@ -103,7 +114,14 @@ export const getEvents = async (
 
     const hasMore = skip + events.length < total;
 
-    sendSuccess(res, { events, pagination: { page: pageNum, limit: limitNum, total, hasMore } });
+    // Flatten registration/bookmark status into each event
+    const enrichedEvents = events.map(({ registrations, bookmarks, ...event }) => ({
+      ...event,
+      isBookmarked: Boolean(bookmarks && bookmarks.length > 0),
+      isRegistered: Boolean(registrations && registrations.length > 0 && registrations[0]?.status === "registered"),
+    }));
+
+    sendSuccess(res, { events: enrichedEvents, pagination: { page: pageNum, limit: limitNum, total, hasMore } });
   } catch (error) {
     next(error);
   }
@@ -126,24 +144,30 @@ export const getEventById = async (
       where: { id: eventId },
       include: {
         creator: { select: { id: true, fullName: true, username: true, avatarUrl: true } },
-        _count: { select: { bookmarks: true } },
+        _count: { select: { bookmarks: true, registrations: true } },
         bookmarks: {
           where: { userId },
           select: { userId: true },
+        },
+        registrations: {
+          where: { userId },
+          select: { id: true, status: true },
         },
       },
     });
 
     if (!event) throw ApiError.notFound("Event");
 
-    // Enhance response with whether current user bookmarked it
-    const isBookmarked = event.bookmarks.length > 0;
+    // Enhance response with user-specific flags
+    const isBookmarked = Boolean(event.bookmarks && event.bookmarks.length > 0);
+    const isRegistered = Boolean(event.registrations && event.registrations.length > 0 && event.registrations[0]?.status === "registered");
     
-    // Remove the bookmarks array to keep response clean
-    const { bookmarks, ...eventData } = event;
+    // Remove the arrays to keep response clean
+    const { bookmarks, registrations, ...eventData } = event;
     void bookmarks;
+    void registrations;
 
-    sendSuccess(res, { ...eventData, isBookmarked });
+    sendSuccess(res, { ...eventData, isBookmarked, isRegistered });
   } catch (error) {
     next(error);
   }
@@ -317,6 +341,99 @@ export const removeBookmark = async (
     });
 
     sendSuccess(res, { bookmarked: false });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/v1/events/:id/register
+ * RSVP / register for an event (internal Nexora registration).
+ */
+export const registerForEvent = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const eventId = req.params.id as string;
+    const userId = req.user!.id;
+
+    const event = await prisma.event.findUnique({
+      where: { id: eventId },
+    });
+
+    if (!event) throw ApiError.notFound("Event");
+
+    // Check for existing registration
+    const existing = await prisma.eventRegistration.findUnique({
+      where: {
+        eventId_userId: { eventId, userId },
+      },
+    });
+
+    if (existing) {
+      if (existing.status === "registered") {
+        throw ApiError.conflict("You are already registered for this event");
+      }
+      // Re-register if previously cancelled
+      const updated = await prisma.eventRegistration.update({
+        where: { id: existing.id },
+        data: { status: "registered", updatedAt: new Date() },
+      });
+      sendSuccess(res, { registered: true, registration: updated });
+      return;
+    }
+
+    const registration = await prisma.eventRegistration.create({
+      data: {
+        eventId,
+        userId,
+        status: "registered",
+      },
+    });
+
+    sendSuccess(res, { registered: true, registration }, 201);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * DELETE /api/v1/events/:id/register
+ * Cancel RSVP / registration for an event.
+ */
+export const cancelRegistration = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const eventId = req.params.id as string;
+    const userId = req.user!.id;
+
+    const event = await prisma.event.findUnique({
+      where: { id: eventId },
+    });
+
+    if (!event) throw ApiError.notFound("Event");
+
+    const existing = await prisma.eventRegistration.findUnique({
+      where: {
+        eventId_userId: { eventId, userId },
+      },
+    });
+
+    if (!existing || existing.status !== "registered") {
+      throw ApiError.notFound("Registration not found");
+    }
+
+    await prisma.eventRegistration.update({
+      where: { id: existing.id },
+      data: { status: "cancelled", updatedAt: new Date() },
+    });
+
+    sendSuccess(res, { registered: false });
   } catch (error) {
     next(error);
   }

@@ -230,4 +230,26 @@ export const authService = {
     const response = await api.put("/auth/me", data);
     return response.data.data;
   },
+
+  /**
+   * Change password for the currently authenticated user.
+   * Uses Supabase client-side updateUser (same pattern as resetPassword).
+   */
+  async changePassword(newPassword: string) {
+    const supabase = createClient();
+
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+
+    if (error) throw error;
+  },
+
+  /**
+   * Delete the current user's account.
+   * Calls the backend which handles Prisma data cleanup + Supabase Auth deletion.
+   */
+  async deleteAccount(): Promise<void> {
+    await api.delete("/auth/me");
+  },
 };

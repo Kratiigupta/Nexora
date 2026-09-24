@@ -81,11 +81,11 @@ export default function EventDetailPage() {
       if (event.isBookmarked) {
         await eventService.removeBookmark(eventId);
         toast.success("Event removed from bookmarks");
-        setEvent({ ...event, isBookmarked: false, _count: { bookmarks: (event._count?.bookmarks || 1) - 1 } });
+        setEvent({ ...event, isBookmarked: false, _count: { bookmarks: (event._count?.bookmarks || 1) - 1, registrations: event._count?.registrations || 0 } });
       } else {
         await eventService.bookmarkEvent(eventId);
         toast.success("Event bookmarked");
-        setEvent({ ...event, isBookmarked: true, _count: { bookmarks: (event._count?.bookmarks || 0) + 1 } });
+        setEvent({ ...event, isBookmarked: true, _count: { bookmarks: (event._count?.bookmarks || 0) + 1, registrations: event._count?.registrations || 0 } });
       }
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } } };

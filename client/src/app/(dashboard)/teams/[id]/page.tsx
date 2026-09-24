@@ -7,6 +7,7 @@ import { ArrowLeft, Users, LogOut, UserMinus, ShieldAlert, MoreHorizontal, Alert
 import { toast } from "sonner";
 import { teamService } from "@/lib/services/team.service";
 import { InviteMemberDialog } from "@/components/team/InviteMemberDialog";
+import { ManageRequiredSkillsDialog } from "@/components/team/ManageRequiredSkillsDialog";
 import { CreateProjectDialog } from "@/components/project/CreateProjectDialog";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -225,6 +226,30 @@ export default function TeamDetailsPage() {
               <span className="font-medium text-foreground mr-1">{team.members?.length || 1}</span> of {team.maxMembers} members
               <span className="mx-3">•</span>
               Created {new Date(team.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+            </div>
+
+            <div className="pt-4 border-t mt-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold text-foreground">Required Skills</h3>
+                <ManageRequiredSkillsDialog
+                  teamId={team.id}
+                  currentSkills={team.requiredSkills || []}
+                  onSuccess={fetchTeam}
+                  canEdit={isOwner || isAdmin}
+                />
+              </div>
+              
+              {team.requiredSkills && team.requiredSkills.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {team.requiredSkills.map((reqSkill) => (
+                    <Badge key={reqSkill.skillId} variant="secondary" className="font-medium text-xs bg-primary/10 text-primary hover:bg-primary/20">
+                      {reqSkill.skill?.name || "Unknown Skill"}
+                    </Badge>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">No specific skills required.</p>
+              )}
             </div>
           </div>
         </div>
