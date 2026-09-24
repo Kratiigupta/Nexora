@@ -40,6 +40,7 @@ import {
   Code2,
   Lightbulb,
   Shield,
+  Loader2,
 } from "lucide-react";
 
 const availabilityOptions: { value: AvailabilityStatus; label: string }[] = [
@@ -63,6 +64,8 @@ export default function EditProfilePage() {
   const [isLoading, setIsLoading] = useState(true);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const resumeInputRef = useRef<HTMLInputElement>(null);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [isUploadingResume, setIsUploadingResume] = useState(false);
 
   // Fetch profile
   useEffect(() => {
@@ -91,6 +94,7 @@ export default function EditProfilePage() {
     const file = e.target.files?.[0];
     if (!file || !profile) return;
 
+    setIsUploadingAvatar(true);
     try {
       const avatarUrl = await profileService.uploadAvatar(profile.id, file);
       updateField("avatarUrl", avatarUrl);
@@ -100,6 +104,8 @@ export default function EditProfilePage() {
       toast.error("Failed to upload avatar", {
         description: err?.message || "Please try again.",
       });
+    } finally {
+      setIsUploadingAvatar(false);
     }
   };
 
@@ -107,6 +113,7 @@ export default function EditProfilePage() {
     const file = e.target.files?.[0];
     if (!file || !profile) return;
 
+    setIsUploadingResume(true);
     try {
       const resumeUrl = await profileService.uploadResume(profile.id, file);
       updateField("resumeUrl", resumeUrl);
@@ -116,6 +123,8 @@ export default function EditProfilePage() {
       toast.error("Failed to upload resume", {
         description: err?.message || "Please try again.",
       });
+    } finally {
+      setIsUploadingResume(false);
     }
   };
 
@@ -248,10 +257,11 @@ export default function EditProfilePage() {
                     size="sm"
                     className="mt-2 text-xs gap-1.5"
                     onClick={() => avatarInputRef.current?.click()}
+                    disabled={isUploadingAvatar}
                     type="button"
                   >
-                    <Upload className="h-3 w-3" />
-                    Upload Photo
+                    {isUploadingAvatar ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
+                    {isUploadingAvatar ? "Uploading..." : "Upload Photo"}
                   </Button>
                 </div>
               </div>
@@ -519,10 +529,11 @@ export default function EditProfilePage() {
                 size="sm"
                 className="w-full gap-2 text-xs"
                 onClick={() => resumeInputRef.current?.click()}
+                disabled={isUploadingResume}
                 type="button"
               >
-                <Upload className="h-3 w-3" />
-                {(draft.resumeUrl || profile.resumeUrl) ? "Replace Resume" : "Upload Resume"}
+                {isUploadingResume ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
+                {isUploadingResume ? "Uploading..." : (draft.resumeUrl || profile.resumeUrl) ? "Replace Resume" : "Upload Resume"}
               </Button>
               <input
                 ref={resumeInputRef}

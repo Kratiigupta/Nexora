@@ -79,7 +79,12 @@ export function AiMatchInsightButton({ candidateId }: AiMatchInsightProps) {
                   <p className="text-xs">Analyzing compatibility...</p>
                 </div>
               ) : error ? (
-                <p className="text-xs text-destructive text-center py-2">{error}</p>
+                <div className="flex flex-col items-center justify-center py-3 space-y-2">
+                  <p className="text-xs text-destructive text-center">{error}</p>
+                  <Button variant="outline" size="sm" onClick={fetchInsight} className="h-7 text-xs">
+                    Retry
+                  </Button>
+                </div>
               ) : insight ? (
                 <div className="space-y-3">
                   <p className="text-xs text-foreground/90 leading-relaxed">

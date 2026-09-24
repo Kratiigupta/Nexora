@@ -37,14 +37,15 @@ export default function DashboardPage() {
   const { profile, isProfileLoading } = useAuthStore();
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-
+  const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     const fetchDashboard = async () => {
       try {
         const data = await profileService.getDashboard();
         setDashboardData(data);
-      } catch (error) {
-        console.error("Failed to fetch dashboard data:", error);
+      } catch (err) {
+        console.error("Failed to fetch dashboard data:", err);
+        setError("Failed to load dashboard data. Please try again.");
       } finally {
         setIsLoading(false);
       }
@@ -54,6 +55,20 @@ export default function DashboardPage() {
       fetchDashboard();
     }
   }, [profile]);
+
+  const handleRetry = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const data = await profileService.getDashboard();
+      setDashboardData(data);
+    } catch (err) {
+      console.error("Failed to fetch dashboard data:", err);
+      setError("Failed to load dashboard data. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   if (isProfileLoading || isLoading) {
     return <DashboardSkeleton />;
@@ -68,6 +83,15 @@ export default function DashboardPage() {
             Back to login
           </Button>
         </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
+        <p className="text-muted-foreground">{error}</p>
+        <Button onClick={handleRetry}>Retry</Button>
       </div>
     );
   }
