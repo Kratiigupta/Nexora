@@ -157,8 +157,31 @@ export const authService = {
    * Auto-creates a profile if one doesn't exist.
    */
   async fetchProfile(): Promise<Profile> {
-    const response = await api.get("/auth/me");
-    return response.data.data;
+    const maxRetries = 3;
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        const response = await api.get("/auth/me");
+        return response.data.data;
+      } catch (error: unknown) {
+        const isLastAttempt = attempt === maxRetries - 1;
+        // Only retry on timeout or network errors, not on 4xx/5xx
+        const isRetryable =
+          error instanceof Error &&
+          "code" in error &&
+          ((error as { code: string }).code === "ECONNABORTED" ||
+            (error as { code: string }).code === "ERR_NETWORK");
+
+        if (isLastAttempt || !isRetryable) {
+          throw error;
+        }
+        // Exponential backoff: 2s, 4s
+        const delay = Math.pow(2, attempt + 1) * 1000;
+        console.warn(`fetchProfile attempt ${attempt + 1} failed (timeout/network), retrying in ${delay}ms...`);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+    }
+    // TypeScript: unreachable, but satisfies the compiler
+    throw new Error("fetchProfile failed after retries");
   },
 
   /**

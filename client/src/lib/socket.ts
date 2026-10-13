@@ -27,8 +27,10 @@ export const getSocket = async (): Promise<Socket> => {
     },
     transports: ["websocket", "polling"],
     reconnection: true,
-    reconnectionAttempts: 5,
-    reconnectionDelay: 1000,
+    reconnectionAttempts: 10,
+    reconnectionDelay: 2000,
+    reconnectionDelayMax: 10000,
+    timeout: 30000,
   });
 
   socket.on("connect", () => {
