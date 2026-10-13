@@ -20,6 +20,7 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useAuthStore } from "@/stores/authStore";
 import { useNotificationStore } from "@/stores/notificationStore";
 import { authService } from "@/lib/services/auth.service";
+import { clearApiTokenCache } from "@/lib/api";
 import { notificationService } from "@/lib/services/notification.service";
 import { getInitials } from "@/lib/utils";
 import { toast } from "sonner";
@@ -226,6 +227,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const handleLogout = async () => {
     try {
       await authService.signOut();
+      clearApiTokenCache();
       clearAuth();
       toast.success("Signed out successfully");
       router.push("/login");
@@ -450,18 +452,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
         {/* Page content */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-muted/10">
-          <div className="mx-auto max-w-6xl">
-            <AnimatePresence mode="popLayout">
-              <motion.div
-                key={pathname}
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.15 }}
-              >
-                {children}
-              </motion.div>
-            </AnimatePresence>
+          <div className="mx-auto max-w-6xl animate-in fade-in duration-100" key={pathname}>
+            {children}
           </div>
         </div>
       </main>

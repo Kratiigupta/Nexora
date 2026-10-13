@@ -21,7 +21,7 @@ export const getSocket = async (): Promise<Socket> => {
     throw new Error("No active session for socket connection");
   }
 
-  socket = io(process.env.NEXT_PUBLIC_SOCKET_URL!, {
+  const newSocket = io(process.env.NEXT_PUBLIC_SOCKET_URL!, {
     auth: {
       token: session.access_token,
     },
@@ -33,19 +33,23 @@ export const getSocket = async (): Promise<Socket> => {
     timeout: 30000,
   });
 
-  socket.on("connect", () => {
-    console.log("🔌 Socket connected:", socket?.id);
+  socket = newSocket;
+
+  newSocket.on("connect", () => {
+    if (newSocket.id) {
+      console.log("🔌 Socket connected:", newSocket.id);
+    }
   });
 
-  socket.on("disconnect", (reason) => {
+  newSocket.on("disconnect", (reason) => {
     console.log("🔌 Socket disconnected:", reason);
   });
 
-  socket.on("connect_error", (error) => {
+  newSocket.on("connect_error", (error) => {
     console.error("🔌 Socket connection error:", error.message);
   });
 
-  return socket;
+  return newSocket;
 };
 
 /**

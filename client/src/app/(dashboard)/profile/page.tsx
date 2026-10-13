@@ -27,10 +27,15 @@ import Link from "next/link";
 export default function ProfilePage() {
   const router = useRouter();
   const { profile: authProfile, isProfileLoading } = useAuthStore();
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [profile, setProfile] = useState<Profile | null>(authProfile);
+  const [isLoading, setIsLoading] = useState(!authProfile);
 
   useEffect(() => {
+    if (authProfile && !profile) {
+      setProfile(authProfile);
+      setIsLoading(false);
+    }
+
     const fetchProfile = async () => {
       try {
         const data = await profileService.getMyProfile();
@@ -49,7 +54,7 @@ export default function ProfilePage() {
     }
   }, [authProfile]);
 
-  if (isProfileLoading || isLoading) {
+  if ((isProfileLoading && !profile) || (isLoading && !profile)) {
     return <ProfileSkeleton />;
   }
 

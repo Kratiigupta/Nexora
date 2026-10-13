@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/authStore";
 import { profileService } from "@/lib/services/profile.service";
@@ -38,7 +38,14 @@ export default function DashboardPage() {
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const hasFetchedRef = useRef(false);
+
+  // Fetch dashboard data immediately — don't wait for profile to load.
+  // The API call uses the cached Supabase token directly.
   useEffect(() => {
+    if (hasFetchedRef.current) return;
+    hasFetchedRef.current = true;
+
     const fetchDashboard = async () => {
       try {
         const data = await profileService.getDashboard();
@@ -51,10 +58,8 @@ export default function DashboardPage() {
       }
     };
 
-    if (profile) {
-      fetchDashboard();
-    }
-  }, [profile]);
+    fetchDashboard();
+  }, []);
 
   const handleRetry = async () => {
     setIsLoading(true);

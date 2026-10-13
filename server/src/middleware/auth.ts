@@ -15,8 +15,33 @@ export interface AuthenticatedRequest extends Request {
 }
 
 /**
+ * In-memory token verification cache.
+ * Avoids calling supabaseAdmin.auth.getUser() on every request,
+ * which adds ~500ms-1s network latency per API call.
+ *
+ * Cache entries expire after 5 minutes (Supabase JWTs last ~60 min).
+ */
+const tokenCache = new Map<
+  string,
+  { user: { id: string; email: string; role?: string }; expiresAt: number }
+>();
+
+const TOKEN_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+// Periodically clean expired entries to prevent memory leaks
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, entry] of tokenCache) {
+    if (now >= entry.expiresAt) {
+      tokenCache.delete(key);
+    }
+  }
+}, 60 * 1000); // Clean up every minute
+
+/**
  * Authentication middleware.
  * Validates the Supabase JWT from the Authorization header.
+ * Uses an in-memory cache to avoid repeated network calls to Supabase.
  * Attaches user info to req.user for downstream handlers.
  */
 export const authMiddleware = async (
@@ -37,23 +62,41 @@ export const authMiddleware = async (
       throw ApiError.unauthorized("Token not provided");
     }
 
-    // Verify the JWT with Supabase
+    // Check cache first
+    const cached = tokenCache.get(token);
+    if (cached && Date.now() < cached.expiresAt) {
+      req.user = cached.user;
+      req.accessToken = token;
+      return next();
+    }
+
+    // Cache miss — verify with Supabase
     const {
       data: { user },
       error,
     } = await supabaseAdmin.auth.getUser(token);
 
     if (error || !user) {
+      // Remove invalid token from cache if present
+      tokenCache.delete(token);
       throw ApiError.unauthorized("Invalid or expired token");
     }
 
     // Attach user info to the request object
-    req.user = {
+    const userInfo = {
       id: user.id,
       email: user.email || "",
       role: user.user_metadata?.role || "student",
     };
+
+    req.user = userInfo;
     req.accessToken = token;
+
+    // Cache the verified token
+    tokenCache.set(token, {
+      user: userInfo,
+      expiresAt: Date.now() + TOKEN_CACHE_TTL,
+    });
 
     next();
   } catch (error) {
@@ -77,17 +120,32 @@ export const optionalAuth = async (
       const token = authHeader.split(" ")[1];
 
       if (token) {
+        // Check cache first
+        const cached = tokenCache.get(token);
+        if (cached && Date.now() < cached.expiresAt) {
+          req.user = cached.user;
+          req.accessToken = token;
+          return next();
+        }
+
         const {
           data: { user },
         } = await supabaseAdmin.auth.getUser(token);
 
         if (user) {
-          req.user = {
+          const userInfo = {
             id: user.id,
             email: user.email || "",
             role: user.user_metadata?.role || "student",
           };
+
+          req.user = userInfo;
           req.accessToken = token;
+
+          tokenCache.set(token, {
+            user: userInfo,
+            expiresAt: Date.now() + TOKEN_CACHE_TTL,
+          });
         }
       }
     }

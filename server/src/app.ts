@@ -57,14 +57,15 @@ app.use(
     origin: (origin, callback) => {
       // Allow requests with no origin (e.g., server-to-server, curl, mobile apps)
       if (!origin) return callback(null, true);
-      // Check exact match or Vercel preview deploy pattern
       if (
         allowedOrigins.includes(origin) ||
-        /^https:\/\/nexora[a-z0-9-]*\.vercel\.app$/.test(origin)
+        origin.endsWith(".vercel.app") ||
+        origin.includes("localhost") ||
+        origin.includes("127.0.0.1")
       ) {
         return callback(null, true);
       }
-      callback(new Error("Not allowed by CORS"));
+      callback(null, false);
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],

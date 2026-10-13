@@ -27,6 +27,62 @@ if (!supabaseKey || supabaseKey.includes("dummy")) {
 }
 
 export const updateSession = async (request: NextRequest) => {
+  const pathname = request.nextUrl.pathname;
+
+  // Protected routes — require authentication
+  const protectedPaths = [
+    "/dashboard",
+    "/profile",
+    "/discover",
+    "/connections",
+    "/teams",
+    "/projects",
+    "/messages",
+    "/skill-exchange",
+    "/events",
+    "/notifications",
+    "/settings",
+    "/admin",
+    "/onboarding",
+  ];
+
+  // Auth pages — redirect authenticated users to dashboard
+  const authPaths = ["/login", "/register", "/forgot-password", "/verify-email"];
+
+  const isProtected = protectedPaths.some((path) => pathname.startsWith(path));
+  const isAuthPage = authPaths.some((path) => pathname.startsWith(path));
+
+  // 1. Skip auth checks entirely for public / marketing pages
+  if (!isProtected && !isAuthPage) {
+    return NextResponse.next({ request });
+  }
+
+  // Check if any Supabase auth cookies are present
+  const allCookies = request.cookies.getAll();
+  const hasAuthCookie = allCookies.some((c) =>
+    c.name.startsWith("sb-") && (c.name.endsWith("-auth-token") || c.name.includes("auth"))
+  );
+
+  // 2. Unauthenticated user hitting protected path without any auth cookie
+  // Redirect immediately without an expensive network roundtrip to Supabase
+  if (isProtected && !hasAuthCookie) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
+    url.searchParams.set("redirect", pathname);
+    return NextResponse.redirect(url);
+  }
+
+  // 3. Next.js Link prefetch requests
+  // Bypass getUser() network call so prefetching 10+ sidebar links is instantaneous
+  const isPrefetch =
+    request.headers.get("next-router-prefetch") === "1" ||
+    request.headers.get("purpose") === "prefetch";
+
+  if (isPrefetch && isProtected && hasAuthCookie) {
+    return NextResponse.next({ request });
+  }
+
+  // 4. Real navigations — refresh the session via Supabase
   let supabaseResponse = NextResponse.next({
     request,
   });
@@ -54,45 +110,16 @@ export const updateSession = async (request: NextRequest) => {
     }
   );
 
-  // Refresh the session — IMPORTANT: do not remove this
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Protected routes — require authentication
-  const protectedPaths = [
-    "/dashboard",
-    "/profile",
-    "/discover",
-    "/connections",
-    "/teams",
-    "/projects",
-    "/messages",
-    "/skill-exchange",
-    "/events",
-    "/notifications",
-    "/settings",
-    "/admin",
-    "/onboarding",
-  ];
-
-  const isProtected = protectedPaths.some((path) =>
-    request.nextUrl.pathname.startsWith(path)
-  );
-
   if (isProtected && !user) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
-    url.searchParams.set("redirect", request.nextUrl.pathname);
+    url.searchParams.set("redirect", pathname);
     return NextResponse.redirect(url);
   }
-
-  // Auth pages — redirect authenticated users to dashboard
-  // Exception: reset-password is accessible for authenticated users (coming from email link)
-  const authPaths = ["/login", "/register", "/forgot-password", "/verify-email"];
-  const isAuthPage = authPaths.some((path) =>
-    request.nextUrl.pathname.startsWith(path)
-  );
 
   if (isAuthPage && user) {
     const url = request.nextUrl.clone();

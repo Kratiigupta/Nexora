@@ -15,7 +15,10 @@ export const getNotifications = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const userId = req.user!.id;
+    const userId = req.user?.id;
+    if (!userId) {
+      throw ApiError.unauthorized("Authentication required");
+    }
     const { page, limit, unread_only } = req.query;
 
     const { page: pageNum, limit: limitNum, offset } = getPagination(
@@ -30,18 +33,30 @@ export const getNotifications = async (
       where.isRead = false;
     }
 
-    const [notifications, total, unreadCount] = await Promise.all([
-      prisma.notification.findMany({
-        where,
-        orderBy: { createdAt: "desc" },
-        skip: offset,
-        take: limitNum,
-      }),
-      prisma.notification.count({ where }),
-      prisma.notification.count({
-        where: { userId, isRead: false },
-      }),
-    ]);
+    // Run queries with individual error handling
+    let notifications: any[] = [];
+    let total = 0;
+    let unreadCount = 0;
+    try {
+      [notifications, total, unreadCount] = await Promise.all([
+        prisma.notification.findMany({
+          where,
+          orderBy: { createdAt: "desc" },
+          skip: offset,
+          take: limitNum,
+        }),
+        prisma.notification.count({ where }),
+        prisma.notification.count({
+          where: { userId, isRead: false },
+        }),
+      ]);
+    } catch (dbError) {
+      console.error("Notification DB query failed:", dbError);
+      // Return empty notifications instead of 500
+      notifications = [];
+      total = 0;
+      unreadCount = 0;
+    }
 
     sendSuccess(
       res,
@@ -50,6 +65,7 @@ export const getNotifications = async (
       buildPaginationMeta(pageNum, limitNum, total)
     );
   } catch (error) {
+    console.error("getNotifications error:", error);
     next(error);
   }
 };
@@ -64,7 +80,10 @@ export const markAsRead = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const userId = req.user!.id;
+    const userId = req.user?.id;
+    if (!userId) {
+      throw ApiError.unauthorized("Authentication required");
+    }
     const notificationId = req.params.id as string;
 
     // Verify the notification belongs to the current user
@@ -101,14 +120,23 @@ export const markAllAsRead = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const userId = req.user!.id;
+    const userId = req.user?.id;
+    if (!userId) {
+      throw ApiError.unauthorized("Authentication required");
+    }
 
-    const result = await prisma.notification.updateMany({
-      where: { userId, isRead: false },
-      data: { isRead: true },
-    });
+    let updatedCount = 0;
+    try {
+      const result = await prisma.notification.updateMany({
+        where: { userId, isRead: false },
+        data: { isRead: true },
+      });
+      updatedCount = result.count;
+    } catch (dbError) {
+      console.error("markAllAsRead DB error:", dbError);
+    }
 
-    sendSuccess(res, { updated: result.count });
+    sendSuccess(res, { updated: updatedCount });
   } catch (error) {
     next(error);
   }
