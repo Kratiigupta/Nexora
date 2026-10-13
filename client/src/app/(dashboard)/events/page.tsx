@@ -32,7 +32,7 @@ export default function EventsPage() {
         upcoming: filterUpcoming || undefined,
         type: filterType || undefined,
       });
-      setEvents(response.events);
+      setEvents(response?.events || []);
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } } };
       setError(e.response?.data?.message || "Failed to load events.");

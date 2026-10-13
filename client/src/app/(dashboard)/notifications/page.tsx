@@ -74,12 +74,12 @@ export default function NotificationsPage() {
         limit: 20,
         unread_only: showUnreadOnly ? "true" : undefined,
       });
-      setLocalNotifications(data.notifications);
-      setUnreadCount(data.unreadCount);
-      setTotalPages(meta.totalPages);
+      setLocalNotifications(data?.notifications || []);
+      setUnreadCount(data?.unreadCount || 0);
+      setTotalPages(meta?.totalPages || 1);
 
       // Sync to zustand store for the bell badge
-      if (page === 1 && !showUnreadOnly) {
+      if (page === 1 && !showUnreadOnly && data?.notifications) {
         setNotifications(data.notifications);
       }
     } catch (err: unknown) {

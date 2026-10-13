@@ -192,7 +192,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const fetchNotifications = useCallback(async () => {
     try {
       const { data } = await notificationService.getNotifications({ limit: 8 });
-      setNotifications(data.notifications);
+      if (data?.notifications) {
+        setNotifications(data.notifications);
+      }
     } catch {
       // Silently fail — bell icon will just show no notifications
     }
