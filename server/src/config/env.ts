@@ -14,7 +14,7 @@ const envSchema = z.object({
     .enum(["development", "production", "test"])
     .default("development"),
   PORT: z.coerce.number().default(5000),
-  CLIENT_URL: z.string().url().default("http://localhost:3000"),
+  CLIENT_URL: z.string().min(1, "CLIENT_URL is required").default("http://localhost:3000"),
 
   // Supabase
   SUPABASE_URL: z.string().min(1, "SUPABASE_URL is required"),

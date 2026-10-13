@@ -64,6 +64,7 @@ export const updateSession = async (request: NextRequest) => {
     "/dashboard",
     "/profile",
     "/discover",
+    "/connections",
     "/teams",
     "/projects",
     "/messages",

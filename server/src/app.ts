@@ -49,9 +49,23 @@ app.use(
 );
 
 // CORS — allow requests from the Next.js frontend
+// Supports multiple origins via comma-separated CLIENT_URL (e.g., "https://nexora.vercel.app,https://nexora-preview.vercel.app")
+const allowedOrigins = env.CLIENT_URL.split(",").map((o) => o.trim());
+
 app.use(
   cors({
-    origin: env.CLIENT_URL,
+    origin: (origin, callback) => {
+      // Allow requests with no origin (e.g., server-to-server, curl, mobile apps)
+      if (!origin) return callback(null, true);
+      // Check exact match or Vercel preview deploy pattern
+      if (
+        allowedOrigins.includes(origin) ||
+        /^https:\/\/nexora[a-z0-9-]*\.vercel\.app$/.test(origin)
+      ) {
+        return callback(null, true);
+      }
+      callback(new Error("Not allowed by CORS"));
+    },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],

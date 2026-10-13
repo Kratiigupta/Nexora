@@ -451,13 +451,13 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         {/* Page content */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-muted/10">
           <div className="mx-auto max-w-6xl">
-            <AnimatePresence mode="wait">
+            <AnimatePresence mode="popLayout">
               <motion.div
                 key={pathname}
-                initial={{ opacity: 0, y: 8 }}
+                initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.3 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
               >
                 {children}
               </motion.div>
