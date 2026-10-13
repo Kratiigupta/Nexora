@@ -61,7 +61,10 @@ export const getEvents = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const userId = req.user!.id;
+    const userId = req.user?.id;
+    if (!userId) {
+      throw ApiError.unauthorized("Authentication required");
+    }
     const { page, limit, type, search, upcoming } = req.query;
     
     const pageNum = Number(page) || 1;
@@ -88,29 +91,37 @@ export const getEvents = async (
       where.startDate = { lt: new Date() };
     }
 
-    const [events, total] = await Promise.all([
-      prisma.event.findMany({
-        where,
-        include: {
-          creator: { select: { id: true, fullName: true, username: true, avatarUrl: true } },
-          _count: { select: { bookmarks: true, registrations: true } },
-          // Include current user's registration to determine RSVP status in bulk
-          registrations: {
-            where: { userId },
-            select: { id: true, status: true },
+    let events: any[] = [];
+    let total = 0;
+    try {
+      [events, total] = await Promise.all([
+        prisma.event.findMany({
+          where,
+          include: {
+            creator: { select: { id: true, fullName: true, username: true, avatarUrl: true } },
+            _count: { select: { bookmarks: true, registrations: true } },
+            // Include current user's registration to determine RSVP status in bulk
+            registrations: {
+              where: { userId },
+              select: { id: true, status: true },
+            },
+            // Include current user's bookmark status in bulk
+            bookmarks: {
+              where: { userId },
+              select: { userId: true },
+            },
           },
-          // Include current user's bookmark status in bulk
-          bookmarks: {
-            where: { userId },
-            select: { userId: true },
-          },
-        },
-        orderBy: { startDate: "asc" },
-        skip,
-        take: limitNum,
-      }),
-      prisma.event.count({ where }),
-    ]);
+          orderBy: { startDate: "asc" },
+          skip,
+          take: limitNum,
+        }),
+        prisma.event.count({ where }),
+      ]);
+    } catch (dbError) {
+      console.error("Event DB query failed:", dbError);
+      events = [];
+      total = 0;
+    }
 
     const hasMore = skip + events.length < total;
 
@@ -123,6 +134,7 @@ export const getEvents = async (
 
     sendSuccess(res, { events: enrichedEvents, pagination: { page: pageNum, limit: limitNum, total, hasMore } });
   } catch (error) {
+    console.error("getEvents error:", error);
     next(error);
   }
 };
