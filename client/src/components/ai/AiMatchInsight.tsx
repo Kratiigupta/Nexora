@@ -5,7 +5,6 @@ import { Sparkles, Loader2, ChevronDown, ChevronUp, Check, Lightbulb } from "luc
 import { Button } from "@/components/ui/button";
 import { aiService } from "@/lib/services/ai.service";
 import type { AiMatchInsight } from "@/types/ai";
-import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -64,14 +63,8 @@ export function AiMatchInsightButton({ candidateId }: AiMatchInsightProps) {
         {insight && (isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />)}
       </Button>
 
-      <AnimatePresence>
-        {isExpanded && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden"
-          >
+      {isExpanded && (
+        <div className="overflow-hidden animate-in fade-in slide-in-from-top-1 duration-200">
             <div className="bg-indigo-50/30 dark:bg-indigo-950/10 border border-indigo-100 dark:border-indigo-900/50 rounded-lg p-3 mt-2 text-left">
               {isLoading ? (
                 <div className="flex flex-col items-center justify-center py-4 space-y-2 text-indigo-400">
@@ -140,9 +133,8 @@ export function AiMatchInsightButton({ candidateId }: AiMatchInsightProps) {
                 </div>
               ) : null}
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+        </div>
+      )}
     </div>
   );
 }

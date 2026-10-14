@@ -3,7 +3,7 @@
 import { ReactNode, useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
+import { SocketProvider } from "@/providers/SocketProvider";
 import { cn, timeAgo } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -250,7 +250,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   };
 
   return (
-    <div className="flex min-h-screen">
+    <SocketProvider>
+      <div className="flex min-h-screen">
       {/* Desktop sidebar */}
       <aside className="w-64 border-r bg-sidebar border-sidebar-border hidden md:flex flex-col fixed inset-y-0 left-0 z-30">
         <SidebarContent
@@ -460,5 +461,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         </div>
       </main>
     </div>
+  </SocketProvider>
   );
 }

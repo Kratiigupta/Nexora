@@ -12,12 +12,14 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { Event } from "@/types/event";
 import Image from "next/image";
 import Link from "next/link";
+import { useDebounce } from "@/hooks/useDebounce";
 
 export default function EventsPage() {
   const [events, setEvents] = useState<Event[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearch = useDebounce(searchQuery, 300);
   const [filterUpcoming, setFilterUpcoming] = useState<"true" | "false" | "">(""); 
   const [filterType, setFilterType] = useState<string>("");
   const [processingBookmarks, setProcessingBookmarks] = useState<Set<string>>(new Set());
@@ -28,7 +30,7 @@ export default function EventsPage() {
     setError(null);
     try {
       const response = await eventService.getEvents({
-        search: searchQuery || undefined,
+        search: debouncedSearch || undefined,
         upcoming: filterUpcoming || undefined,
         type: filterType || undefined,
       });
@@ -39,7 +41,7 @@ export default function EventsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [searchQuery, filterUpcoming, filterType]);
+  }, [debouncedSearch, filterUpcoming, filterType]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect

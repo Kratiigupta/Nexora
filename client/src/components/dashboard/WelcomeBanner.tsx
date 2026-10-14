@@ -1,6 +1,3 @@
-"use client";
-
-import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getInitials } from "@/lib/utils";
@@ -10,7 +7,7 @@ import { Sparkles } from "lucide-react";
 
 /**
  * WelcomeBanner — gradient hero banner with avatar, greeting, and profile stats.
- * Shown at the top of the dashboard.
+ * Optimized with pure GPU-accelerated CSS animations.
  */
 
 interface WelcomeBannerProps {
@@ -25,14 +22,11 @@ export function WelcomeBanner({ profile, className }: WelcomeBannerProps) {
     hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.6 }}
+    <div
       className={cn(
         "relative overflow-hidden rounded-2xl border border-border/50",
         "bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-600",
-        "p-6 sm:p-8",
+        "p-6 sm:p-8 animate-in fade-in slide-in-from-bottom-2 duration-500",
         className
       )}
     >
@@ -54,14 +48,9 @@ export function WelcomeBanner({ profile, className }: WelcomeBannerProps) {
         </Avatar>
 
         <div className="flex-1 min-w-0">
-          <motion.h1
-            initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.2 }}
-            className="text-xl sm:text-2xl font-bold text-white tracking-tight"
-          >
+          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight animate-in fade-in slide-in-from-left-2 duration-300">
             {greeting}, {firstName}! 👋
-          </motion.h1>
+          </h1>
           <p className="text-sm text-white/70 mt-1">
             @{profile.username} · {profile.role.charAt(0).toUpperCase() + profile.role.slice(1)}
           </p>
@@ -73,6 +62,6 @@ export function WelcomeBanner({ profile, className }: WelcomeBannerProps) {
           </div>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }

@@ -264,17 +264,18 @@ export const getMessages = async (
 
     const skip = (page - 1) * limit;
 
-    const messages = await prisma.message.findMany({
-      where: { conversationId },
-      include: {
-        sender: { select: { id: true, fullName: true, username: true, avatarUrl: true } },
-      },
-      orderBy: { createdAt: "desc" }, // Newest first for API pagination
-      skip,
-      take: limit,
-    });
-
-    const total = await prisma.message.count({ where: { conversationId } });
+    const [messages, total] = await Promise.all([
+      prisma.message.findMany({
+        where: { conversationId },
+        include: {
+          sender: { select: { id: true, fullName: true, username: true, avatarUrl: true } },
+        },
+        orderBy: { createdAt: "desc" }, // Newest first for API pagination
+        skip,
+        take: limit,
+      }),
+      prisma.message.count({ where: { conversationId } }),
+    ]);
 
     sendSuccess(res, {
       messages,

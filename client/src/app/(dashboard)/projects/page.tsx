@@ -6,8 +6,8 @@ import { projectService } from "@/lib/services/project.service";
 import type { Project } from "@/types/project";
 import { Button } from "@/components/ui/button";
 import { ProjectCard } from "@/components/project/ProjectCard";
-import { CreateProjectDialog } from "@/components/project/CreateProjectDialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CreateProjectDialog } from "@/components/project/CreateProjectDialog";
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);

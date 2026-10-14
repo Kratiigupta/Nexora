@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +11,8 @@ import type { TeammateRecommendation } from "@/types/dashboard";
 import { profileService } from "@/lib/services/profile.service";
 import { Sparkles, AlertCircle, RefreshCw } from "lucide-react";
 
+import Link from "next/link";
+
 interface RecommendedTeammatesProps {
   className?: string;
 }
@@ -19,12 +21,13 @@ export function RecommendedTeammates({ className }: RecommendedTeammatesProps) {
   const [teammates, setTeammates] = useState<TeammateRecommendation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const hasFetchedRef = useRef(false);
 
   const fetchRecommendations = async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await profileService.getRecommendedTeammates({ limit: 5 }); // Since it's a dashboard widget, we just need a few
+      const data = await profileService.getRecommendedTeammates({ limit: 5 });
       setTeammates(data.users);
     } catch (err) {
       console.error("Failed to load recommendations:", err);
@@ -35,7 +38,9 @@ export function RecommendedTeammates({ className }: RecommendedTeammatesProps) {
   };
 
   useEffect(() => {
-    void Promise.resolve().then(() => fetchRecommendations());
+    if (hasFetchedRef.current) return;
+    hasFetchedRef.current = true;
+    fetchRecommendations();
   }, []);
 
   if (isLoading) {
@@ -79,9 +84,10 @@ export function RecommendedTeammates({ className }: RecommendedTeammatesProps) {
   return (
     <div className={cn("space-y-3", className)}>
       {teammates.map((teammate) => (
-        <div
+        <Link
           key={teammate.id}
-          className="flex items-start gap-3 rounded-lg p-2.5 hover:bg-muted/50 transition-colors cursor-pointer"
+          href={`/profile/${teammate.username}`}
+          className="flex items-start gap-3 rounded-lg p-2.5 hover:bg-muted/50 transition-colors block group"
         >
           <Avatar className="h-10 w-10 shrink-0">
             <AvatarImage src={teammate.avatarUrl || undefined} alt={teammate.fullName} />
@@ -92,7 +98,7 @@ export function RecommendedTeammates({ className }: RecommendedTeammatesProps) {
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <p className="text-sm font-medium truncate">{teammate.fullName}</p>
+              <p className="text-sm font-medium truncate group-hover:text-primary transition-colors">{teammate.fullName}</p>
               <Badge variant="secondary" className="text-[10px] px-1.5 py-0 shrink-0 bg-primary/10 text-primary border-0">
                 {teammate.score} pts
               </Badge>
@@ -119,7 +125,7 @@ export function RecommendedTeammates({ className }: RecommendedTeammatesProps) {
               )}
             </div>
           </div>
-        </div>
+        </Link>
       ))}
     </div>
   );

@@ -27,38 +27,39 @@ import Link from "next/link";
 export default function ProfilePage() {
   const router = useRouter();
   const { profile: authProfile, isProfileLoading } = useAuthStore();
-  const [profile, setProfile] = useState<Profile | null>(authProfile);
-  const [isLoading, setIsLoading] = useState(!authProfile);
+  const [profile, setProfile] = useState<Profile | null>(null);
 
   useEffect(() => {
-    if (authProfile && !profile) {
-      setProfile(authProfile);
-      setIsLoading(false);
-    }
+    let isMounted = true;
 
     const fetchProfile = async () => {
       try {
         const data = await profileService.getMyProfile();
-        setProfile(data);
+        if (isMounted) {
+          setProfile(data);
+        }
       } catch (error) {
         console.error("Failed to fetch profile:", error);
-        // Fallback to auth store profile
-        if (authProfile) setProfile(authProfile);
-      } finally {
-        setIsLoading(false);
       }
     };
 
     if (authProfile) {
       fetchProfile();
     }
+
+    return () => {
+      isMounted = false;
+    };
   }, [authProfile]);
 
-  if ((isProfileLoading && !profile) || (isLoading && !profile)) {
+  const activeProfile =
+    profile && profile.id === authProfile?.id ? profile : authProfile;
+
+  if (isProfileLoading && !activeProfile) {
     return <ProfileSkeleton />;
   }
 
-  if (!profile) {
+  if (!activeProfile) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center space-y-4">
@@ -71,17 +72,17 @@ export default function ProfilePage() {
     );
   }
 
-  const portfolioLinks = buildPortfolioLinks(profile);
+  const portfolioLinks = buildPortfolioLinks(activeProfile);
 
   return (
     <div className="space-y-6">
       {/* Profile Header */}
       <ProfileHeader
-        profile={profile}
+        profile={activeProfile}
         stats={{
-          projects: profile.stats?.projects || 0,
-          teams: profile.stats?.teams || 0,
-          connections: profile.stats?.connections || 0,
+          projects: activeProfile.stats?.projects || 0,
+          teams: activeProfile.stats?.teams || 0,
+          connections: activeProfile.stats?.connections || 0,
         }}
         actions={
           <Link href="/profile/edit">
@@ -103,9 +104,9 @@ export default function ProfilePage() {
             icon={<Code2 className="h-4 w-4" />}
             delay={0.1}
           >
-            {profile.skills && profile.skills.length > 0 ? (
+            {activeProfile.skills && activeProfile.skills.length > 0 ? (
               <div className="flex flex-wrap gap-2">
-                {profile.skills.map((us) => (
+                {activeProfile.skills.map((us) => (
                   <SkillChip
                     key={us.skillId}
                     name={us.skill.name}
@@ -133,9 +134,9 @@ export default function ProfilePage() {
             icon={<Lightbulb className="h-4 w-4" />}
             delay={0.15}
           >
-            {profile.interests && profile.interests.length > 0 ? (
+            {activeProfile.interests && activeProfile.interests.length > 0 ? (
               <div className="flex flex-wrap gap-2">
-                {profile.interests.map((interest) => (
+                {activeProfile.interests.map((interest) => (
                   <span
                     key={interest}
                     className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium bg-primary/10 text-primary"
@@ -163,8 +164,8 @@ export default function ProfilePage() {
           {/* Profile Completion */}
           <DashboardCard title="Completion" delay={0.1}>
             <div className="flex flex-col items-center gap-3">
-              <ProfileCompletion percentage={profile.profileCompletion || 0} size={90} />
-              {(profile.profileCompletion || 0) < 100 && (
+              <ProfileCompletion percentage={activeProfile.profileCompletion || 0} size={90} />
+              {(activeProfile.profileCompletion || 0) < 100 && (
                 <Link href="/profile/edit">
                   <Button variant="outline" size="sm" className="text-xs">
                     Complete Profile

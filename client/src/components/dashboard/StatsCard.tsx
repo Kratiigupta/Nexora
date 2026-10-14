@@ -1,12 +1,10 @@
-"use client";
-
 import { ReactNode } from "react";
-import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 
 /**
  * StatsCard — individual stat with icon, value, label, and optional trend.
+ * Optimized with pure GPU-accelerated CSS animations.
  */
 
 interface StatsCardProps {
@@ -40,13 +38,12 @@ export function StatsCard({
         : "text-muted-foreground";
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay }}
+    <div
+      style={delay ? { animationDelay: `${Math.round(delay * 1000)}ms` } : undefined}
       className={cn(
         "rounded-xl border border-border/50 bg-card/80 backdrop-blur-sm p-4",
         "hover:border-border hover:shadow-md transition-all duration-300",
+        "animate-in fade-in slide-in-from-bottom-2 duration-300 fill-mode-backwards",
         className
       )}
     >
@@ -65,6 +62,6 @@ export function StatsCard({
         <p className="text-2xl font-bold tracking-tight">{value}</p>
         <p className="text-xs text-muted-foreground mt-0.5">{label}</p>
       </div>
-    </motion.div>
+    </div>
   );
 }

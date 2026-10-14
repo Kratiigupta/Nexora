@@ -70,18 +70,12 @@ export const getMyProjects = async (
   try {
     const userId = req.user!.id;
 
-    // Get user's teams
-    const memberships = await prisma.teamMember.findMany({
-      where: { userId },
-      select: { teamId: true },
-    });
-    const teamIds = memberships.map((m) => m.teamId);
-
+    // Fetch projects directly via relation filtering in a single query
     const projects = await prisma.project.findMany({
       where: {
         OR: [
-          { createdBy: userId, teamId: null },
-          { teamId: { in: teamIds } },
+          { createdBy: userId },
+          { team: { members: { some: { userId } } } },
         ],
       },
       include: {

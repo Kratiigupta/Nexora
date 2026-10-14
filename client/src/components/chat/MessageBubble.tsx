@@ -11,7 +11,12 @@ interface MessageBubbleProps {
   isRead?: boolean;
 }
 
-export function MessageBubble({ message, isOwnMessage, showAvatar = true, isRead = false }: MessageBubbleProps) {
+export const MessageBubble = React.memo(function MessageBubble({
+  message,
+  isOwnMessage,
+  showAvatar = true,
+  isRead = false,
+}: MessageBubbleProps) {
   const isSystem = message.type === "system";
 
   if (isSystem) {
@@ -56,6 +61,7 @@ export function MessageBubble({ message, isOwnMessage, showAvatar = true, isRead
                 src={message.fileUrl} 
                 alt="Uploaded content" 
                 className="max-w-full rounded-lg max-h-64 object-cover" 
+                loading="lazy"
               />
               {message.content && <span>{message.content}</span>}
             </div>
@@ -85,4 +91,4 @@ export function MessageBubble({ message, isOwnMessage, showAvatar = true, isRead
       </div>
     </div>
   );
-}
+});

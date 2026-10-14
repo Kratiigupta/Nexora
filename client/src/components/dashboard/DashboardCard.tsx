@@ -1,12 +1,9 @@
-"use client";
-
 import { ReactNode } from "react";
-import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 /**
  * DashboardCard — glassmorphism card wrapper with hover effects.
- * Base container for all dashboard sections.
+ * Optimized with pure GPU-accelerated CSS animations.
  */
 
 interface DashboardCardProps {
@@ -29,14 +26,12 @@ export function DashboardCard({
   delay = 0,
 }: DashboardCardProps) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay }}
+    <div
+      style={delay ? { animationDelay: `${Math.round(delay * 1000)}ms` } : undefined}
       className={cn(
         "rounded-xl border border-border/50 bg-card/80 backdrop-blur-sm",
         "hover:border-border hover:shadow-md transition-all duration-300",
-        "overflow-hidden",
+        "overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-300 fill-mode-backwards",
         className
       )}
     >
@@ -61,6 +56,6 @@ export function DashboardCard({
         </div>
       )}
       <div className="p-5">{children}</div>
-    </motion.div>
+    </div>
   );
 }

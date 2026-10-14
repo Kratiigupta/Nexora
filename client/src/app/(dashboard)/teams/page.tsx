@@ -6,8 +6,9 @@ import { Users, Inbox, Check, X } from "lucide-react";
 import { toast } from "sonner";
 import { teamService } from "@/lib/services/team.service";
 import { TeamCard } from "@/components/team/TeamCard";
-import { CreateTeamDialog } from "@/components/team/CreateTeamDialog";
 import { Button } from "@/components/ui/button";
+import { CreateTeamDialog } from "@/components/team/CreateTeamDialog";
+
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";

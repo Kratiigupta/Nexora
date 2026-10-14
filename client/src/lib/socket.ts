@@ -1,14 +1,29 @@
-import { io, Socket } from "socket.io-client";
+import type { Socket } from "socket.io-client";
 import { createClient } from "@/lib/supabase/client";
 
 let socket: Socket | null = null;
+let ioModule: typeof import("socket.io-client") | null = null;
+
+/**
+ * Lazily import socket.io-client so it's not included in the initial bundle.
+ * Unauthenticated visitors (landing page) never download the library.
+ */
+const getIo = async () => {
+  if (!ioModule) {
+    ioModule = await import("socket.io-client");
+  }
+  return ioModule.io;
+};
 
 /**
  * Get or create the Socket.IO client singleton.
  * Authenticates using the current Supabase session token.
  */
 export const getSocket = async (): Promise<Socket> => {
-  if (socket?.connected) {
+  if (socket) {
+    if (!socket.connected) {
+      socket.connect();
+    }
     return socket;
   }
 
@@ -21,16 +36,23 @@ export const getSocket = async (): Promise<Socket> => {
     throw new Error("No active session for socket connection");
   }
 
-  const newSocket = io(process.env.NEXT_PUBLIC_SOCKET_URL!, {
+  const io = await getIo();
+  const socketUrl =
+    process.env.NEXT_PUBLIC_SOCKET_URL ||
+    process.env.NEXT_PUBLIC_API_URL?.replace(/\/api\/v1\/?$/, "") ||
+    "http://localhost:5000";
+
+  const newSocket = io(socketUrl, {
     auth: {
       token: session.access_token,
     },
-    transports: ["websocket", "polling"],
+    transports: ["websocket"],
+    upgrade: false,
     reconnection: true,
-    reconnectionAttempts: 10,
+    reconnectionAttempts: 5,
     reconnectionDelay: 2000,
     reconnectionDelayMax: 10000,
-    timeout: 30000,
+    timeout: 20000,
   });
 
   socket = newSocket;

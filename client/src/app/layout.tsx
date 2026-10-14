@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "@/providers/ThemeProvider";
 import { AuthProvider } from "@/providers/AuthProvider";
-import { SocketProvider } from "@/providers/SocketProvider";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
@@ -60,7 +59,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <AuthProvider>
-            <SocketProvider>{children}</SocketProvider>
+            {children}
           </AuthProvider>
           <Toaster
             position="top-right"

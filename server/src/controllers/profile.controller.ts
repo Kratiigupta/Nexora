@@ -424,6 +424,16 @@ export const getDashboard = async (
         where: { userId },
         orderBy: { createdAt: "desc" },
         take: 5,
+        select: {
+          id: true,
+          type: true,
+          title: true,
+          body: true,
+          referenceType: true,
+          referenceId: true,
+          isRead: true,
+          createdAt: true,
+        },
       }),
 
       // Recent activity (last 10)
@@ -431,6 +441,13 @@ export const getDashboard = async (
         where: { userId },
         orderBy: { createdAt: "desc" },
         take: 10,
+        select: {
+          id: true,
+          action: true,
+          description: true,
+          metadata: true,
+          createdAt: true,
+        },
       }),
 
       // Team count
@@ -513,10 +530,16 @@ export const getRecommendedTeammates = async (
     const page = Math.max(1, parseInt(req.query.page as string) || 1);
     const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string) || 20));
 
-    // Fetch current user's profile and skills
+    // Fetch current user's profile and skills with lean selection
     const currentUser = await prisma.profile.findUnique({
       where: { id: userId },
-      include: { skills: true },
+      select: {
+        id: true,
+        department: true,
+        year: true,
+        interests: true,
+        skills: { select: { skillId: true } },
+      },
     });
 
     if (!currentUser) {
@@ -555,13 +578,26 @@ export const getRecommendedTeammates = async (
       }
     }
 
-    // Fetch eligible candidates (bound to 200 to prevent loading the entire DB)
+    // Fetch eligible candidates with lean field selection
     const candidates = await prisma.profile.findMany({
       where: whereClause,
-      include: {
-        skills: { include: { skill: true } }
+      select: {
+        id: true,
+        fullName: true,
+        username: true,
+        avatarUrl: true,
+        department: true,
+        year: true,
+        bio: true,
+        interests: true,
+        skills: {
+          select: {
+            skillId: true,
+            skill: { select: { name: true } },
+          },
+        },
       },
-      take: 200
+      take: 200,
     });
 
     // Score candidates deterministically

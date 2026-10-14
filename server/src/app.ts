@@ -3,6 +3,7 @@ import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
 import cookieParser from "cookie-parser";
+import compression from "compression";
 import { createServer } from "http";
 
 import { env } from "./config/env";
@@ -86,6 +87,9 @@ app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 // Cookie parsing
 app.use(cookieParser());
+
+// HTTP response compression for lightweight and fast API responses
+app.use(compression());
 
 // Rate limiting
 app.use(rateLimiter);

@@ -230,7 +230,10 @@ body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeSpeed;
 }
+
+
 
 /* Smooth scrolling — handled via data-scroll-behavior="smooth" on <html> in layout.tsx */
 

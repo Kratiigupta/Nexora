@@ -1,6 +1,3 @@
-"use client";
-
-import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getInitials } from "@/lib/utils";
@@ -32,16 +29,20 @@ interface ProfileCardProps {
 
 export function ProfileCard({ profile, onClick, className }: ProfileCardProps) {
   return (
-    <motion.div
-      whileHover={{ y: -2, scale: 1.01 }}
-      transition={{ duration: 0.2 }}
+    <div
       className={cn(
         "group relative rounded-xl border border-border/50 bg-card/80 backdrop-blur-sm p-4",
-        "hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300",
+        "hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 hover:-translate-y-0.5 hover:scale-[1.01] transition-all duration-200 transform-gpu",
         onClick && "cursor-pointer",
         className
       )}
       onClick={onClick}
+      onKeyDown={(e) => {
+        if (onClick && (e.key === "Enter" || e.key === " ")) {
+          e.preventDefault();
+          onClick();
+        }
+      }}
       role={onClick ? "button" : undefined}
       tabIndex={onClick ? 0 : undefined}
     >
@@ -88,6 +89,6 @@ export function ProfileCard({ profile, onClick, className }: ProfileCardProps) {
       <div className="mt-3">
         <AvailabilityBadge status={profile.availabilityStatus} />
       </div>
-    </motion.div>
+    </div>
   );
 }

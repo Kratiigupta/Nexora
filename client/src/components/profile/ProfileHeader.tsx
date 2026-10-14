@@ -1,6 +1,3 @@
-"use client";
-
-import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getInitials } from "@/lib/utils";
@@ -31,11 +28,11 @@ export function ProfileHeader({
     stats || ("stats" in profile ? (profile as PublicProfile).stats : undefined);
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-      className={cn("relative overflow-hidden rounded-2xl border border-border/50", className)}
+    <div
+      className={cn(
+        "relative overflow-hidden rounded-2xl border border-border/50 animate-in fade-in slide-in-from-bottom-2 duration-300",
+        className
+      )}
     >
       {/* Gradient cover */}
       <div className="h-32 sm:h-40 bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-600 relative">
@@ -115,7 +112,7 @@ export function ProfileHeader({
           {actions && <div className="flex items-center gap-2">{actions}</div>}
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }
 

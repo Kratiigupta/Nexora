@@ -11,7 +11,11 @@ interface ConversationListProps {
   onSelect: (id: string) => void;
 }
 
-export function ConversationList({ conversations, activeId, onSelect }: ConversationListProps) {
+export const ConversationList = React.memo(function ConversationList({
+  conversations,
+  activeId,
+  onSelect,
+}: ConversationListProps) {
   const { profile } = useAuthStore();
   const { onlineUsers } = useChatStore();
   const currentUserId = profile?.id;
@@ -126,4 +130,4 @@ export function ConversationList({ conversations, activeId, onSelect }: Conversa
       })}
     </div>
   );
-}
+});

@@ -1,13 +1,11 @@
-"use client";
-
 import { ReactNode } from "react";
-import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 
 /**
  * QuickActionCard — action button card for quick navigation.
+ * Optimized with pure GPU-accelerated CSS animations and hover effects.
  */
 
 interface QuickActionCardProps {
@@ -30,19 +28,16 @@ export function QuickActionCard({
   delay = 0,
 }: QuickActionCardProps) {
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.3, delay }}
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
+    <div
+      style={delay ? { animationDelay: `${Math.round(delay * 1000)}ms` } : undefined}
+      className="animate-in fade-in zoom-in-95 duration-300 fill-mode-backwards"
     >
       <Link
         href={href}
         className={cn(
           "group flex items-center gap-4 rounded-xl border border-border/50 p-4",
           "bg-gradient-to-br hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5",
-          "transition-all duration-300",
+          "hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 transform-gpu",
           gradient,
           className
         )}
@@ -56,6 +51,6 @@ export function QuickActionCard({
         </div>
         <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all shrink-0" />
       </Link>
-    </motion.div>
+    </div>
   );
 }

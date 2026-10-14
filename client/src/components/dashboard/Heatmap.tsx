@@ -1,16 +1,12 @@
 "use client";
 
+import { useState, useMemo } from "react";
 import { cn } from "@/lib/utils";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import type { HeatmapData } from "@/types/dashboard";
 
 /**
  * Heatmap — GitHub-style activity heatmap showing daily activity over the past year.
- * Each cell represents one day, colored by activity count.
+ * Optimized with a single shared tooltip and lightweight DOM rendering.
  */
 
 interface HeatmapProps {
@@ -33,45 +29,53 @@ const getColor = (count: number): string => {
 };
 
 export function Heatmap({ data, className }: HeatmapProps) {
-  // Generate last 52 weeks of dates
-  const today = new Date();
-  const weeks: Date[][] = [];
-  const startDate = new Date(today);
-  startDate.setDate(startDate.getDate() - 364);
-  // Align to Monday
-  startDate.setDate(startDate.getDate() - ((startDate.getDay() + 6) % 7));
+  const [hoveredCell, setHoveredCell] = useState<{
+    count: number;
+    formattedDate: string;
+    x: number;
+    y: number;
+  } | null>(null);
 
-  const currentDate = new Date(startDate);
-  let currentWeek: Date[] = [];
+  // Memoize date grid and month labels — avoids recalculating ~365 dates on every hover
+  const { weeks, monthLabels, totalActivities } = useMemo(() => {
+    const today = new Date();
+    const generatedWeeks: Date[][] = [];
+    const startDate = new Date(today);
+    startDate.setDate(startDate.getDate() - 364);
+    startDate.setDate(startDate.getDate() - ((startDate.getDay() + 6) % 7));
 
-  while (currentDate <= today) {
-    currentWeek.push(new Date(currentDate));
-    if (currentWeek.length === 7) {
-      weeks.push(currentWeek);
-      currentWeek = [];
+    const currentDate = new Date(startDate);
+    let currentWeek: Date[] = [];
+
+    while (currentDate <= today) {
+      currentWeek.push(new Date(currentDate));
+      if (currentWeek.length === 7) {
+        generatedWeeks.push(currentWeek);
+        currentWeek = [];
+      }
+      currentDate.setDate(currentDate.getDate() + 1);
     }
-    currentDate.setDate(currentDate.getDate() + 1);
-  }
-  if (currentWeek.length > 0) {
-    weeks.push(currentWeek);
-  }
-
-  // Calculate total activities
-  const totalActivities = Object.values(data).reduce((sum, count) => sum + count, 0);
-
-  // Get month labels
-  const monthLabels: { label: string; weekIndex: number }[] = [];
-  let lastMonth = -1;
-  weeks.forEach((week, weekIndex) => {
-    const month = week[0].getMonth();
-    if (month !== lastMonth) {
-      monthLabels.push({ label: MONTHS[month], weekIndex });
-      lastMonth = month;
+    if (currentWeek.length > 0) {
+      generatedWeeks.push(currentWeek);
     }
-  });
+
+    const total = Object.values(data).reduce((sum, count) => sum + count, 0);
+
+    const labels: { label: string; weekIndex: number }[] = [];
+    let lastMonth = -1;
+    generatedWeeks.forEach((week, weekIndex) => {
+      const month = week[0].getMonth();
+      if (month !== lastMonth) {
+        labels.push({ label: MONTHS[month], weekIndex });
+        lastMonth = month;
+      }
+    });
+
+    return { weeks: generatedWeeks, monthLabels: labels, totalActivities: total };
+  }, [data]);
 
   return (
-    <div className={cn("space-y-2", className)}>
+    <div className={cn("space-y-2 relative", className)}>
       <div className="flex items-center justify-between text-xs text-muted-foreground mb-3">
         <span>{totalActivities} activities in the last year</span>
         <div className="flex items-center gap-1.5">
@@ -122,29 +126,45 @@ export function Heatmap({ data, className }: HeatmapProps) {
                 {week.map((date) => {
                   const dateStr = date.toISOString().split("T")[0];
                   const count = data[dateStr] || 0;
+                  const formattedDate = date.toLocaleDateString("en-US", {
+                    weekday: "short",
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  });
 
                   return (
-                    <Tooltip key={dateStr}>
-                      <TooltipTrigger
-                        className={cn(
-                          "h-[11px] w-[11px] rounded-[2px] transition-colors",
-                          getColor(count)
-                        )}
-                      />
-                      <TooltipContent side="top" className="text-xs">
-                        <p className="font-medium">
-                          {count} {count === 1 ? "activity" : "activities"}
-                        </p>
-                        <p className="text-muted-foreground">
-                          {date.toLocaleDateString("en-US", {
-                            weekday: "short",
-                            month: "short",
-                            day: "numeric",
-                            year: "numeric",
-                          })}
-                        </p>
-                      </TooltipContent>
-                    </Tooltip>
+                    <div
+                      key={dateStr}
+                      role="gridcell"
+                      tabIndex={0}
+                      aria-label={`${count} ${count === 1 ? "activity" : "activities"} on ${formattedDate}`}
+                      onMouseEnter={(e) => {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        setHoveredCell({
+                          count,
+                          formattedDate,
+                          x: rect.left + rect.width / 2,
+                          y: rect.top,
+                        });
+                      }}
+                      onMouseLeave={() => setHoveredCell(null)}
+                      onFocus={(e) => {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        setHoveredCell({
+                          count,
+                          formattedDate,
+                          x: rect.left + rect.width / 2,
+                          y: rect.top,
+                        });
+                      }}
+                      onBlur={() => setHoveredCell(null)}
+                      title={`${count} ${count === 1 ? "activity" : "activities"} on ${formattedDate}`}
+                      className={cn(
+                        "h-[11px] w-[11px] rounded-[2px] transition-colors cursor-pointer hover:ring-1 hover:ring-foreground/50 focus-visible:ring-1 focus-visible:ring-primary focus:outline-none",
+                        getColor(count)
+                      )}
+                    />
                   );
                 })}
               </div>
@@ -152,6 +172,24 @@ export function Heatmap({ data, className }: HeatmapProps) {
           </div>
         </div>
       </div>
+
+      {/* Single floating shared tooltip */}
+      {hoveredCell && (
+        <div
+          className="fixed z-50 pointer-events-none -translate-x-1/2 -translate-y-full mb-2 px-2.5 py-1 rounded bg-popover text-popover-foreground border shadow-md text-xs animate-in fade-in-50 zoom-in-95 duration-100"
+          style={{
+            left: `${hoveredCell.x}px`,
+            top: `${hoveredCell.y - 6}px`,
+          }}
+        >
+          <p className="font-semibold text-[11px] leading-tight">
+            {hoveredCell.count} {hoveredCell.count === 1 ? "activity" : "activities"}
+          </p>
+          <p className="text-[10px] text-muted-foreground leading-tight">
+            {hoveredCell.formattedDate}
+          </p>
+        </div>
+      )}
     </div>
   );
 }
