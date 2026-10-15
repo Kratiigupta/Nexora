@@ -1,5 +1,9 @@
 import type { Socket } from "socket.io-client";
 import { createClient } from "@/lib/supabase/client";
+import { isAuthError, MAX_AUTH_RETRIES } from "@/lib/socketUtils";
+
+// Re-export for consumers that were importing from socket.ts
+export { isAuthError, MAX_AUTH_RETRIES };
 
 let socket: Socket | null = null;
 let ioModule: typeof import("socket.io-client") | null = null;
@@ -90,7 +94,10 @@ export const getSocket = async (): Promise<Socket> => {
 
     socket = newSocket;
 
+    let authRetryCount = 0;
+
     newSocket.on("connect", () => {
+      authRetryCount = 0;
       if (newSocket.id) {
         console.log("🔌 Socket connected:", newSocket.id);
       }
@@ -104,11 +111,14 @@ export const getSocket = async (): Promise<Socket> => {
     newSocket.on("connect_error", async (error) => {
       console.error("🔌 Socket connection error:", error.message);
 
-      if (
-        error.message.includes("Authentication") ||
-        error.message.includes("token") ||
-        error.message.includes("Invalid")
-      ) {
+      if (isAuthError(error.message)) {
+        authRetryCount += 1;
+        if (authRetryCount > MAX_AUTH_RETRIES) {
+          console.error("🔌 Exceeded maximum auth retry attempts, stopping reconnection");
+          newSocket.disconnect();
+          return;
+        }
+
         try {
           // Attempt to get a fresh token
           const freshToken = await getAccessToken();

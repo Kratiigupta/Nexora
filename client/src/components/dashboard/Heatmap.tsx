@@ -94,6 +94,7 @@ export function Heatmap({ data, className }: HeatmapProps) {
                     month: "short",
                     day: "numeric",
                     year: "numeric",
+                    timeZone: "UTC",
                   });
 
                   return (

@@ -63,3 +63,26 @@ test("generateHeatmapGrid() handles leap years without crashing", () => {
   assert.equal(result.totalActivities, 1);
   assert.ok(result.weeks.length >= 52);
 });
+
+test("generateHeatmapGrid() produces UTC date keys matching server format", () => {
+  // Verify that grid dates are at UTC midnight, so toISOString().split("T")[0]
+  // produces the same date strings as the server's heatmap data keys.
+  // This must work regardless of the test runner's local timezone offset.
+  const refDate = new Date("2026-10-15T23:59:59Z"); // late UTC — would be Oct 16 in IST
+  const data = { "2026-10-15": 7 };
+  const result = generateHeatmapGrid(data, refDate);
+
+  // The last cell in the grid should be 2026-10-15 (UTC date of refDate)
+  const lastWeek = result.weeks[result.weeks.length - 1];
+  const lastDate = lastWeek[lastWeek.length - 1];
+  const lastDateKey = lastDate.toISOString().split("T")[0];
+  assert.equal(lastDateKey, "2026-10-15", "Last grid cell should match the UTC date of the reference");
+
+  // All grid dates should be at UTC midnight
+  for (const week of result.weeks) {
+    for (const date of week) {
+      assert.equal(date.getUTCHours(), 0, "Grid dates must be at UTC midnight");
+      assert.equal(date.getUTCMinutes(), 0);
+    }
+  }
+});

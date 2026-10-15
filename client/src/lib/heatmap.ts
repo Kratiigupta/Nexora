@@ -27,13 +27,15 @@ export function generateHeatmapGrid(
   data: HeatmapData,
   referenceDate: Date = new Date()
 ): HeatmapGridResult {
+  // Use UTC midnight so date.toISOString().split("T")[0] matches
+  // the server-generated UTC date keys in the heatmap data.
   const today = new Date(referenceDate);
-  today.setHours(0, 0, 0, 0);
+  today.setUTCHours(0, 0, 0, 0);
 
   const generatedWeeks: Date[][] = [];
   const startDate = new Date(today);
-  startDate.setDate(startDate.getDate() - 364);
-  startDate.setDate(startDate.getDate() - ((startDate.getDay() + 6) % 7));
+  startDate.setUTCDate(startDate.getUTCDate() - 364);
+  startDate.setUTCDate(startDate.getUTCDate() - ((startDate.getUTCDay() + 6) % 7));
 
   const currentDate = new Date(startDate);
   let currentWeek: Date[] = [];
@@ -44,7 +46,7 @@ export function generateHeatmapGrid(
       generatedWeeks.push(currentWeek);
       currentWeek = [];
     }
-    currentDate.setDate(currentDate.getDate() + 1);
+    currentDate.setUTCDate(currentDate.getUTCDate() + 1);
   }
   if (currentWeek.length > 0) {
     generatedWeeks.push(currentWeek);
@@ -55,7 +57,7 @@ export function generateHeatmapGrid(
   const labels: { label: string; weekIndex: number }[] = [];
   let lastMonth = -1;
   generatedWeeks.forEach((week, weekIndex) => {
-    const month = week[0].getMonth();
+    const month = week[0].getUTCMonth();
     if (month !== lastMonth) {
       labels.push({ label: MONTHS[month], weekIndex });
       lastMonth = month;

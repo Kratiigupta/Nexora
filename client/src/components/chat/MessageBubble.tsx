@@ -97,6 +97,9 @@ export const MessageBubble = React.memo(function MessageBubble({
     prevProps.message.content === nextProps.message.content &&
     prevProps.message.fileUrl === nextProps.message.fileUrl &&
     prevProps.message.type === nextProps.message.type &&
+    prevProps.message.createdAt === nextProps.message.createdAt &&
+    prevProps.message.sender?.fullName === nextProps.message.sender?.fullName &&
+    prevProps.message.sender?.avatarUrl === nextProps.message.sender?.avatarUrl &&
     prevProps.isOwnMessage === nextProps.isOwnMessage &&
     prevProps.showAvatar === nextProps.showAvatar &&
     prevProps.isRead === nextProps.isRead
