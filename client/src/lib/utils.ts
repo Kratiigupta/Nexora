@@ -86,3 +86,31 @@ export function getInitials(name: string): string {
  * Debounce delay in milliseconds.
  */
 export const DEBOUNCE_DELAY = 300;
+
+/**
+ * Creates a debounced function that delays invoking fn until after wait milliseconds.
+ */
+export function debounce<T extends (...args: unknown[]) => unknown>(
+  fn: T,
+  wait: number = DEBOUNCE_DELAY
+): ((...args: Parameters<T>) => void) & { cancel: () => void } {
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+  const debounced = function (this: unknown, ...args: Parameters<T>) {
+    if (timeoutId !== null) {
+      clearTimeout(timeoutId);
+    }
+    timeoutId = setTimeout(() => {
+      fn.apply(this, args);
+    }, wait);
+  };
+
+  debounced.cancel = () => {
+    if (timeoutId !== null) {
+      clearTimeout(timeoutId);
+      timeoutId = null;
+    }
+  };
+
+  return debounced;
+}

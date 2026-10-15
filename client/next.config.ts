@@ -7,7 +7,6 @@ const nextConfig: NextConfig = {
     optimizePackageImports: [
       "lucide-react",
       "@base-ui/react",
-      "date-fns",
       "sonner",
       "zod",
     ],
@@ -15,6 +14,16 @@ const nextConfig: NextConfig = {
   images: {
     formats: ["image/avif", "image/webp"],
     minimumCacheTTL: 60 * 60 * 24 * 7,
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "**.supabase.co",
+      },
+      {
+        protocol: "https",
+        hostname: "images.unsplash.com",
+      },
+    ],
   },
   compiler: {
     removeConsole:

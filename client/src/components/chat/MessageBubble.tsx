@@ -91,4 +91,14 @@ export const MessageBubble = React.memo(function MessageBubble({
       </div>
     </div>
   );
+}, (prevProps, nextProps) => {
+  return (
+    prevProps.message.id === nextProps.message.id &&
+    prevProps.message.content === nextProps.message.content &&
+    prevProps.message.fileUrl === nextProps.message.fileUrl &&
+    prevProps.message.type === nextProps.message.type &&
+    prevProps.isOwnMessage === nextProps.isOwnMessage &&
+    prevProps.showAvatar === nextProps.showAvatar &&
+    prevProps.isRead === nextProps.isRead
+  );
 });

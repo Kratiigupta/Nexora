@@ -9,24 +9,20 @@ import type { HeatmapData } from "@/types/dashboard";
  * Optimized with a single shared tooltip and lightweight DOM rendering.
  */
 
+import {
+  DAYS,
+  MONTHS,
+  getColor,
+  generateHeatmapGrid,
+  type HeatmapGridResult,
+} from "@/lib/heatmap";
+
+export { DAYS, MONTHS, getColor, generateHeatmapGrid, type HeatmapGridResult };
+
 interface HeatmapProps {
   data: HeatmapData;
   className?: string;
 }
-
-const DAYS = ["Mon", "", "Wed", "", "Fri", "", ""];
-const MONTHS = [
-  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-];
-
-const getColor = (count: number): string => {
-  if (count === 0) return "bg-muted/50";
-  if (count <= 2) return "bg-emerald-500/30 dark:bg-emerald-500/20";
-  if (count <= 4) return "bg-emerald-500/50 dark:bg-emerald-500/40";
-  if (count <= 6) return "bg-emerald-500/70 dark:bg-emerald-500/60";
-  return "bg-emerald-500 dark:bg-emerald-500/80";
-};
 
 export function Heatmap({ data, className }: HeatmapProps) {
   const [hoveredCell, setHoveredCell] = useState<{
@@ -38,40 +34,7 @@ export function Heatmap({ data, className }: HeatmapProps) {
 
   // Memoize date grid and month labels — avoids recalculating ~365 dates on every hover
   const { weeks, monthLabels, totalActivities } = useMemo(() => {
-    const today = new Date();
-    const generatedWeeks: Date[][] = [];
-    const startDate = new Date(today);
-    startDate.setDate(startDate.getDate() - 364);
-    startDate.setDate(startDate.getDate() - ((startDate.getDay() + 6) % 7));
-
-    const currentDate = new Date(startDate);
-    let currentWeek: Date[] = [];
-
-    while (currentDate <= today) {
-      currentWeek.push(new Date(currentDate));
-      if (currentWeek.length === 7) {
-        generatedWeeks.push(currentWeek);
-        currentWeek = [];
-      }
-      currentDate.setDate(currentDate.getDate() + 1);
-    }
-    if (currentWeek.length > 0) {
-      generatedWeeks.push(currentWeek);
-    }
-
-    const total = Object.values(data).reduce((sum, count) => sum + count, 0);
-
-    const labels: { label: string; weekIndex: number }[] = [];
-    let lastMonth = -1;
-    generatedWeeks.forEach((week, weekIndex) => {
-      const month = week[0].getMonth();
-      if (month !== lastMonth) {
-        labels.push({ label: MONTHS[month], weekIndex });
-        lastMonth = month;
-      }
-    });
-
-    return { weeks: generatedWeeks, monthLabels: labels, totalActivities: total };
+    return generateHeatmapGrid(data);
   }, [data]);
 
   return (
