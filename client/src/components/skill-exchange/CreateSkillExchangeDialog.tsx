@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { profileService } from "@/lib/services/profile.service";
 import { skillExchangeService } from "@/lib/services/skillExchange.service";
+import { formatDateTimeLocal } from "@/lib/utils";
 import type { PublicProfile } from "@/types/user";
 
 interface CreateSkillExchangeDialogProps {
@@ -153,7 +154,7 @@ export function CreateSkillExchangeDialog({
                 type="datetime-local"
                 value={scheduledAt}
                 onChange={(e) => setScheduledAt(e.target.value)}
-                min={new Date().toISOString().slice(0, 16)}
+                min={formatDateTimeLocal(new Date())}
               />
             </div>
 

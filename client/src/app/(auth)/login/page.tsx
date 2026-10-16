@@ -35,20 +35,14 @@ function LoginContent() {
   });
 
   const onSubmit = async (data: LoginFormValues) => {
-    console.log("Submitting form:", data);
     try {
-      console.log("Calling authService.signIn...");
-      const result = await authService.signIn({
+      await authService.signIn({
         email: data.email,
         password: data.password,
       });
-      console.log("authService.signIn returned:", result);
-      console.log("Calling toast.success...");
       toast.success("Welcome back!", { description: "You've been signed in successfully." });
-      console.log("Calling router.push...");
       router.push(redirectTo);
       router.refresh();
-      console.log("Done onSubmit try block");
     } catch (error: unknown) {
       console.error("onSubmit caught an error:", error);
       const err = error as { message?: string };
@@ -56,7 +50,6 @@ function LoginContent() {
         err?.message === "Invalid login credentials"
           ? "Invalid email or password. Please try again."
           : err?.message || "Failed to sign in. Please try again.";
-      console.log("Calling toast.error with message:", message);
       toast.error("Sign in failed", { description: message });
     }
   };

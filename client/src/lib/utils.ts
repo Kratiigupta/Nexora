@@ -39,6 +39,17 @@ export function formatDateTime(date: string | Date): string {
 /**
  * Relative time (e.g., "2 hours ago").
  */
+export function formatDateTimeLocal(date?: string | Date | null): string {
+  if (!date) return "";
+  const d = typeof date === "string" ? new Date(date) : date;
+  if (isNaN(d.getTime())) return "";
+  const localDate = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+  return localDate.toISOString().slice(0, 16);
+}
+
+/**
+ * Relative time (e.g., "2 hours ago").
+ */
 export function timeAgo(date: string | Date): string {
   const now = new Date();
   const past = new Date(date);

@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 import {
   cn,
   formatDate,
+  formatDateTimeLocal,
   timeAgo,
   truncate,
   getInitials,
@@ -49,6 +50,15 @@ test("formatDate() formats standard date strings", () => {
   const formatted = formatDate("2026-05-15T10:00:00Z");
   assert.ok(formatted.includes("2026"));
   assert.ok(formatted.includes("May") || formatted.includes("15"));
+});
+
+test("formatDateTimeLocal() produces valid YYYY-MM-DDThh:mm format for datetime-local", () => {
+  assert.equal(formatDateTimeLocal(null), "");
+  assert.equal(formatDateTimeLocal(""), "");
+  assert.equal(formatDateTimeLocal("invalid-date"), "");
+
+  const result = formatDateTimeLocal(new Date(2026, 4, 15, 14, 30));
+  assert.equal(result, "2026-05-15T14:30");
 });
 
 test("debounce() delays function execution until wait elapsed", async () => {

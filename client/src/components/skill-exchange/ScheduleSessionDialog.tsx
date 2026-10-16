@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { skillExchangeService } from "@/lib/services/skillExchange.service";
+import { formatDateTimeLocal } from "@/lib/utils";
 
 interface ScheduleSessionDialogProps {
   open: boolean;
@@ -22,22 +23,29 @@ export function ScheduleSessionDialog({
   onSuccess,
 }: ScheduleSessionDialogProps) {
   const [submitting, setSubmitting] = useState(false);
-  const [scheduledAt, setScheduledAt] = useState(() => {
-    if (currentSchedule) {
-      // slice(0,16) formats ISO string to yyyy-MM-ddThh:mm for datetime-local
-      return new Date(currentSchedule).toISOString().slice(0, 16);
+  const [scheduledAt, setScheduledAt] = useState(() => formatDateTimeLocal(currentSchedule));
+
+  useEffect(() => {
+    if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setScheduledAt(formatDateTimeLocal(currentSchedule));
     }
-    return "";
-  });
+  }, [open, currentSchedule]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!sessionId || !scheduledAt) return;
 
+    const parsedDate = new Date(scheduledAt);
+    if (isNaN(parsedDate.getTime())) {
+      toast.error("Please enter a valid date and time");
+      return;
+    }
+
     setSubmitting(true);
     try {
       await skillExchangeService.scheduleSession(sessionId, {
-        scheduledAt: new Date(scheduledAt).toISOString(),
+        scheduledAt: parsedDate.toISOString(),
       });
       toast.success("Session scheduled successfully!");
       onOpenChange(false);
@@ -68,7 +76,7 @@ export function ScheduleSessionDialog({
               type="datetime-local"
               value={scheduledAt}
               onChange={(e) => setScheduledAt(e.target.value)}
-              min={new Date().toISOString().slice(0, 16)}
+              min={formatDateTimeLocal(new Date())}
               required
             />
           </div>
