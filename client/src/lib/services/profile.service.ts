@@ -137,4 +137,34 @@ export const profileService = {
     const response = await api.get("/dashboard/recommended-teammates", { params });
     return response.data.data;
   },
+
+  /**
+   * POST /api/v1/profile/checkin — Daily check-in (+1 star).
+   */
+  async checkIn(): Promise<{
+    success: boolean;
+    alreadyCheckedIn: boolean;
+    starCount: number;
+    currentStreak: number;
+    longestStreak: number;
+    message: string;
+    date: string;
+  }> {
+    const response = await api.post("/profile/checkin");
+    return response.data.data;
+  },
+
+  /**
+   * GET /api/v1/profile/checkin — Fetch today's checkin status.
+   */
+  async getCheckinStatus(): Promise<{
+    hasCheckedInToday: boolean;
+    starCount: number;
+    currentStreak: number;
+    longestStreak: number;
+    date: string;
+  }> {
+    const response = await api.get("/profile/checkin");
+    return response.data.data;
+  },
 };

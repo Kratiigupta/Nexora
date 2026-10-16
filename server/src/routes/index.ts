@@ -15,7 +15,7 @@ import adminRoutes from "./admin.routes";
 import { authMiddleware } from "../middleware/auth";
 import { roleGuard } from "../middleware/roleGuard";
 import { aiRateLimiter } from "../middleware/rateLimiter";
-import { getDashboard, getRecommendedTeammates } from "../controllers/profile.controller";
+import { getDashboard, getRecommendedTeammates, dailyCheckin } from "../controllers/profile.controller";
 import { asyncHandler } from "../utils/asyncHandler";
 
 const router = Router();
@@ -47,6 +47,7 @@ router.use("/upload", authMiddleware, uploadRoutes);
 
 // Dashboard — authenticated, standalone path
 router.get("/dashboard", authMiddleware, asyncHandler(getDashboard));
+router.post("/dashboard/checkin", authMiddleware, asyncHandler(dailyCheckin));
 router.get("/dashboard/recommended-teammates", authMiddleware, asyncHandler(getRecommendedTeammates));
 
 // AI — rate-limited + authenticated

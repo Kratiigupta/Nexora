@@ -22,15 +22,44 @@ export interface HeatmapGridResult {
 
 /**
  * Pure function to calculate a 53-week rolling activity grid and month labels.
+ * Respects UTC date-key format and handles user calendar dates cleanly.
  */
 export function generateHeatmapGrid(
   data: HeatmapData,
-  referenceDate: Date = new Date()
+  referenceDate: Date | string = new Date(),
+  timeZone?: string
 ): HeatmapGridResult {
-  // Use UTC midnight so date.toISOString().split("T")[0] matches
-  // the server-generated UTC date keys in the heatmap data.
-  const today = new Date(referenceDate);
-  today.setUTCHours(0, 0, 0, 0);
+  let today: Date;
+
+  if (typeof referenceDate === "string") {
+    // String provided (e.g., YYYY-MM-DD from server or calendar calculation)
+    const parts = referenceDate.split("-").map(Number);
+    const y = parts[0] ?? 2026;
+    const m = parts[1] ?? 1;
+    const d = parts[2] ?? 1;
+    today = new Date(Date.UTC(y, m - 1, d, 0, 0, 0, 0));
+  } else if (timeZone) {
+    try {
+      const formatter = new Intl.DateTimeFormat("en-CA", {
+        timeZone,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      });
+      const parts = formatter.format(referenceDate).split("-").map(Number);
+      const y = parts[0] ?? 2026;
+      const m = parts[1] ?? 1;
+      const d = parts[2] ?? 1;
+      today = new Date(Date.UTC(y, m - 1, d, 0, 0, 0, 0));
+    } catch {
+      today = new Date(referenceDate);
+      today.setUTCHours(0, 0, 0, 0);
+    }
+  } else {
+    // Default UTC midnight calculation (preserves existing behavior)
+    today = new Date(referenceDate);
+    today.setUTCHours(0, 0, 0, 0);
+  }
 
   const generatedWeeks: Date[][] = [];
   const startDate = new Date(today);

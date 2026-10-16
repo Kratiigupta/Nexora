@@ -15,7 +15,9 @@ import { RecommendedTeammates } from "@/components/dashboard/RecommendedTeammate
 import { RecentProjects } from "@/components/dashboard/RecentProjects";
 import { NotificationsPreview } from "@/components/dashboard/NotificationsPreview";
 import { ActivityTimeline } from "@/components/dashboard/ActivityTimeline";
+import { DailyCheckinCard } from "@/components/dashboard/DailyCheckinCard";
 import type { DashboardData } from "@/types/dashboard";
+import { toast } from "sonner";
 import {
   Users,
   FolderKanban,
@@ -37,6 +39,7 @@ export default function DashboardPage() {
   const { profile, isProfileLoading } = useAuthStore();
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isCheckingIn, setIsCheckingIn] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const hasFetchedRef = useRef(false);
 
@@ -72,6 +75,76 @@ export default function DashboardPage() {
       setError("Failed to load dashboard data. Please try again.");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleCheckIn = async () => {
+    if (isCheckingIn || dashboardData?.hasCheckedInToday) return;
+
+    setIsCheckingIn(true);
+    try {
+      const result = await profileService.checkIn();
+
+      if (result.alreadyCheckedIn) {
+        toast.info(result.message || "Already checked in today");
+        setDashboardData((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            hasCheckedInToday: true,
+            starCount: result.starCount ?? prev.starCount,
+          };
+        });
+      } else {
+        toast.success(result.message || "Checked in successfully! +1 star awarded ⭐");
+        setDashboardData((prev) => {
+          if (!prev) return prev;
+          const todayKey =
+            result.date ||
+            prev.todayDate ||
+            new Date().toISOString().split("T")[0]!;
+          const currentCount = prev.activityHeatmap[todayKey] || 0;
+          const newHeatmap = {
+            ...prev.activityHeatmap,
+            [todayKey]: currentCount + 1,
+          };
+          const newActivity = {
+            id: `checkin-${Date.now()}`,
+            action: "daily_checkin",
+            description: "Completed daily check-in (+1 star ⭐)",
+            metadata: { date: todayKey, starsAwarded: 1 },
+            createdAt: new Date().toISOString(),
+          };
+          return {
+            ...prev,
+            hasCheckedInToday: true,
+            starCount: result.starCount,
+            currentStreak: result.currentStreak ?? prev.currentStreak,
+            longestStreak: result.longestStreak ?? prev.longestStreak,
+            activityHeatmap: newHeatmap,
+            recentActivity: [newActivity, ...(prev.recentActivity || [])],
+          };
+        });
+
+        if (profile) {
+          useAuthStore.getState().setProfile({
+            ...profile,
+            starCount: result.starCount,
+            currentStreak: result.currentStreak ?? profile.currentStreak,
+            longestStreak: result.longestStreak ?? profile.longestStreak,
+          });
+        }
+      }
+    } catch (err: unknown) {
+      console.error("Check-in failed:", err);
+      const msg =
+        err instanceof Error
+          ? err.message
+          : (err as { response?: { data?: { message?: string } } })?.response?.data?.message ||
+            "Failed to complete daily check-in. Please try again.";
+      toast.error(msg);
+    } finally {
+      setIsCheckingIn(false);
     }
   };
 
@@ -112,7 +185,15 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       {/* Welcome Banner */}
-      <WelcomeBanner profile={profile} />
+      <WelcomeBanner
+        profile={profile}
+        starCount={dashboardData?.starCount ?? profile.starCount ?? 0}
+        currentStreak={dashboardData?.currentStreak ?? profile.currentStreak ?? 0}
+        longestStreak={dashboardData?.longestStreak ?? profile.longestStreak ?? 0}
+        hasCheckedInToday={dashboardData?.hasCheckedInToday ?? false}
+        onCheckIn={handleCheckIn}
+        isCheckingIn={isCheckingIn}
+      />
 
       {/* Stats Row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -180,7 +261,10 @@ export default function DashboardPage() {
             icon={<BarChart3 className="h-4 w-4" />}
             delay={0.45}
           >
-            <Heatmap data={dashboardData?.activityHeatmap || {}} />
+            <Heatmap
+              data={dashboardData?.activityHeatmap || {}}
+              referenceDate={dashboardData?.todayDate}
+            />
           </DashboardCard>
 
           {/* Recent Projects */}
@@ -213,6 +297,16 @@ export default function DashboardPage() {
 
         {/* Right Column — 1/3 */}
         <div className="space-y-6">
+          {/* Daily Check-in & Rewards */}
+          <DailyCheckinCard
+            starCount={dashboardData?.starCount ?? profile.starCount ?? 0}
+            currentStreak={dashboardData?.currentStreak ?? profile.currentStreak ?? 0}
+            longestStreak={dashboardData?.longestStreak ?? profile.longestStreak ?? 0}
+            hasCheckedInToday={dashboardData?.hasCheckedInToday ?? false}
+            isCheckingIn={isCheckingIn}
+            onCheckIn={handleCheckIn}
+          />
+
           {/* Profile Completion */}
           <DashboardCard title="Profile" delay={0.45}>
             <div className="flex flex-col items-center gap-4">

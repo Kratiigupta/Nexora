@@ -25,6 +25,10 @@ export interface Profile {
   role: "student" | "mentor" | "admin";
   isAvailable: boolean;
   availabilityStatus: AvailabilityStatus;
+  starCount?: number;
+  currentStreak?: number;
+  longestStreak?: number;
+  lastLoginDate?: string | null;
   usernameChangedAt: string | null;
   createdAt: string;
   updatedAt: string;

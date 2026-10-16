@@ -5,6 +5,8 @@ import { AuthenticatedRequest } from "../middleware/auth";
 import { ApiError } from "../utils/ApiError";
 import { sendSuccess } from "../utils/helpers";
 import { logger } from "../utils/logger";
+import { resolveTimezone } from "../utils/date";
+import { recordDailyLogin } from "../services/streak.service";
 import type { RegisterInput, UpdateProfileInput, OnboardingInput } from "../schemas/auth.schema";
 
 /**
@@ -107,7 +109,17 @@ export const register = async (
 
       logger.info(`New profile created: ${username} (${supabaseId})`);
 
-      sendSuccess(res, profile, 201);
+      const userTimezone = resolveTimezone(
+        (req.headers["x-timezone"] as string) || (req.query.timezone as string)
+      );
+      await recordDailyLogin(supabaseId, userTimezone);
+
+      const refreshedProfile = await prisma.profile.findUnique({
+        where: { id: supabaseId },
+        include: { skills: { include: { skill: true } } },
+      });
+
+      sendSuccess(res, refreshedProfile || profile, 201);
     } catch (error: unknown) {
       // Gracefully handle concurrency race conditions if profile was inserted during our checks
       if (typeof error === "object" && error !== null && "code" in error && (error as { code?: string }).code === "P2002") {
@@ -140,6 +152,9 @@ export const getMe = async (
   try {
     const userId = req.user!.id;
     const email = req.user!.email;
+    const userTimezone = resolveTimezone(
+      (req.headers["x-timezone"] as string) || (req.query.timezone as string)
+    );
 
     let profile = await prisma.profile.findUnique({
       where: { id: userId },
@@ -194,6 +209,14 @@ export const getMe = async (
           throw error;
         }
       }
+    }
+
+    // Register daily login activity and calculate streak
+    const streakResult = await recordDailyLogin(userId, userTimezone);
+    if (profile) {
+      profile.currentStreak = streakResult.currentStreak;
+      profile.longestStreak = streakResult.longestStreak;
+      profile.lastLoginDate = streakResult.lastLoginDate;
     }
 
     sendSuccess(res, profile);

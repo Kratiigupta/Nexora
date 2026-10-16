@@ -22,9 +22,11 @@ export { DAYS, MONTHS, getColor, generateHeatmapGrid, type HeatmapGridResult };
 interface HeatmapProps {
   data: HeatmapData;
   className?: string;
+  referenceDate?: Date | string;
+  timeZone?: string;
 }
 
-export function Heatmap({ data, className }: HeatmapProps) {
+export function Heatmap({ data, className, referenceDate, timeZone }: HeatmapProps) {
   const [hoveredCell, setHoveredCell] = useState<{
     count: number;
     formattedDate: string;
@@ -34,8 +36,8 @@ export function Heatmap({ data, className }: HeatmapProps) {
 
   // Memoize date grid and month labels — avoids recalculating ~365 dates on every hover
   const { weeks, monthLabels, totalActivities } = useMemo(() => {
-    return generateHeatmapGrid(data);
-  }, [data]);
+    return generateHeatmapGrid(data, referenceDate, timeZone);
+  }, [data, referenceDate, timeZone]);
 
   return (
     <div className={cn("space-y-2 relative", className)}>

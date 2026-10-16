@@ -64,4 +64,9 @@ export interface DashboardData {
   notifications: NotificationSummary[];
   activityHeatmap: HeatmapData;
   recentActivity: ActivityLogEntry[];
+  hasCheckedInToday?: boolean;
+  starCount?: number;
+  currentStreak?: number;
+  longestStreak?: number;
+  todayDate?: string;
 }

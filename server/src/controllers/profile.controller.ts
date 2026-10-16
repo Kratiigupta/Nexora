@@ -4,6 +4,9 @@ import { AuthenticatedRequest } from "../middleware/auth";
 import { ApiError } from "../utils/ApiError";
 import { sendSuccess } from "../utils/helpers";
 import { logger } from "../utils/logger";
+import { resolveTimezone, getCalendarDate } from "../utils/date";
+import { performDailyCheckin, getCheckinStatus } from "../services/checkin.service";
+import { recordDailyLogin } from "../services/streak.service";
 import type { UpdateProfileBody, UsernameParam } from "../schemas/profile.schema";
 
 // ──────────────────────────────────────────────────────
@@ -386,6 +389,13 @@ export const getDashboard = async (
 ): Promise<void> => {
   try {
     const userId = req.user!.id;
+    const userTimezone = resolveTimezone(
+      (req.headers["x-timezone"] as string) || (req.query.timezone as string)
+    );
+    const todayStr = getCalendarDate(new Date(), userTimezone);
+
+    // Register daily login activity and calculate streak
+    await recordDailyLogin(userId, userTimezone);
 
     // Fetch all dashboard data in parallel
     const [
@@ -397,6 +407,7 @@ export const getDashboard = async (
       projectCount,
       connectionCount,
       heatmapData,
+      todayCheckin,
     ] = await Promise.all([
       // Profile with skills
       prisma.profile.findUnique({
@@ -476,6 +487,16 @@ export const getDashboard = async (
         },
         select: { createdAt: true },
       }),
+
+      // Check if user has already checked in today
+      prisma.dailyCheckin.findUnique({
+        where: {
+          userId_date: {
+            userId,
+            date: todayStr,
+          },
+        },
+      }),
     ]);
 
     if (!profile) {
@@ -484,10 +505,10 @@ export const getDashboard = async (
 
     const profileCompletion = calculateProfileCompletion(profile);
 
-    // Transform heatmap data into date → count map
+    // Transform heatmap data into date → count map using user's timezone
     const heatmap: Record<string, number> = {};
     for (const entry of heatmapData) {
-      const dateStr = new Date(entry.createdAt).toISOString().split("T")[0] ?? "";
+      const dateStr = getCalendarDate(entry.createdAt, userTimezone);
       heatmap[dateStr] = (heatmap[dateStr] ?? 0) + 1;
     }
 
@@ -507,6 +528,11 @@ export const getDashboard = async (
       notifications,
       activityHeatmap: heatmap,
       recentActivity: activityLogs,
+      hasCheckedInToday: !!todayCheckin,
+      starCount: profile.starCount,
+      currentStreak: profile.currentStreak,
+      longestStreak: profile.longestStreak,
+      todayDate: todayStr,
     });
   } catch (error) {
     next(error);
@@ -666,6 +692,57 @@ export const getRecommendedTeammates = async (
         hasNextPage
       }
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * POST /api/v1/profile/checkin
+ * POST /api/v1/dashboard/checkin
+ * Performs atomic and idempotent daily check-in:
+ * - First check-in on a calendar day awards exactly +1 star.
+ * - Repeated check-in on the same day awards 0 additional stars and returns already checked in.
+ * - Updates today's activity log for heatmap immediately.
+ */
+export const dailyCheckin = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const userId = req.user!.id;
+    const timeZone = resolveTimezone(
+      (req.headers["x-timezone"] as string) ||
+      (req.body?.timezone as string) ||
+      (req.query.timezone as string)
+    );
+
+    const result = await performDailyCheckin(userId, timeZone);
+    sendSuccess(res, result, 200);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /api/v1/profile/checkin
+ * Returns current check-in status for the user today.
+ */
+export const getDailyCheckinStatus = async (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const userId = req.user!.id;
+    const timeZone = resolveTimezone(
+      (req.headers["x-timezone"] as string) ||
+      (req.query.timezone as string)
+    );
+
+    const result = await getCheckinStatus(userId, timeZone);
+    sendSuccess(res, result, 200);
   } catch (error) {
     next(error);
   }

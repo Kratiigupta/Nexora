@@ -7,6 +7,8 @@ import {
   getPublicProfile,
   uploadAvatar,
   uploadResume,
+  dailyCheckin,
+  getDailyCheckinStatus,
 } from "../controllers/profile.controller";
 import { asyncHandler } from "../utils/asyncHandler";
 
@@ -17,6 +19,8 @@ const router = Router();
  *
  * GET    /api/v1/profile            — Get authenticated user's profile
  * PUT    /api/v1/profile            — Update authenticated user's profile
+ * POST   /api/v1/profile/checkin    — Daily check-in (+1 star)
+ * GET    /api/v1/profile/checkin    — Check today's check-in status
  * GET    /api/v1/profile/:username  — Get public profile by username
  * POST   /api/v1/profile/avatar     — Update avatar URL after client upload
  * POST   /api/v1/profile/resume     — Update resume URL after client upload
@@ -33,11 +37,15 @@ router.put(
   asyncHandler(updateMyProfile)
 );
 
+// Daily check-in
+router.post("/checkin", asyncHandler(dailyCheckin));
+router.get("/checkin", asyncHandler(getDailyCheckinStatus));
+
 // File URL updates (client uploads to Supabase Storage, then sends URL here)
 router.post("/avatar", validate({ body: fileUrlBodySchema }), asyncHandler(uploadAvatar));
 router.post("/resume", validate({ body: fileUrlBodySchema }), asyncHandler(uploadResume));
 
-// Public profile — must come after /avatar and /resume to avoid param collision
+// Public profile — must come after /avatar, /resume, /checkin to avoid param collision
 router.get("/:username", validate({ params: usernameParamSchema }), asyncHandler(getPublicProfile));
 
 export default router;

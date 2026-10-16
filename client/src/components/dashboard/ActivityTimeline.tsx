@@ -13,6 +13,8 @@ import {
   GraduationCap,
   Edit,
   Activity,
+  Star,
+  Flame,
 } from "lucide-react";
 
 /**
@@ -30,6 +32,8 @@ const actionIcons: Record<string, typeof Activity> = {
   task_completed: CheckCircle2,
   connection_made: Handshake,
   session_completed: GraduationCap,
+  daily_checkin: Star,
+  login: Flame,
 };
 
 const actionLabels: Record<string, string> = {
@@ -43,6 +47,8 @@ const actionLabels: Record<string, string> = {
   task_completed: "Completed a task",
   connection_made: "Made a connection",
   session_completed: "Completed a session",
+  daily_checkin: "Completed daily check-in (+1 star ⭐)",
+  login: "Logged in",
 };
 
 interface ActivityTimelineProps {

@@ -46,6 +46,8 @@ enum ActivityAction {
   task_completed
   connection_made
   session_completed
+  daily_checkin
+  login
 }
 
 enum TeamType {
@@ -164,6 +166,10 @@ model Profile {
   role               UserRole           @default(student)
   isAvailable        Boolean            @default(true) @map("is_available")
   availabilityStatus AvailabilityStatus @default(available_for_team) @map("availability_status")
+  starCount          Int                @default(0) @map("star_count")
+  currentStreak      Int                @default(0) @map("current_streak")
+  longestStreak      Int                @default(0) @map("longest_streak")
+  lastLoginDate      String?            @map("last_login_date") @db.VarChar(10)
   usernameChangedAt  DateTime?          @map("username_changed_at") @db.Timestamptz()
   createdAt          DateTime           @default(now()) @map("created_at") @db.Timestamptz()
   updatedAt          DateTime           @default(now()) @updatedAt @map("updated_at") @db.Timestamptz()
@@ -186,6 +192,7 @@ model Profile {
   sentConnections       UserConnection[]       @relation("ConnectionRequester")
   receivedConnections   UserConnection[]       @relation("ConnectionReceiver")
   activityLogs          ActivityLog[]
+  dailyCheckins         DailyCheckin[]
 
   @@index([role, isAvailable])
   @@index([department, year])
@@ -497,4 +504,18 @@ model ActivityLog {
 
   @@index([userId, createdAt])
   @@map("activity_logs")
+}
+
+/// Daily check-in record for awarding stars and tracking daily activity
+model DailyCheckin {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  date      String   @db.VarChar(10)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  user Profile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId, date])
+  @@map("daily_checkins")
 }
