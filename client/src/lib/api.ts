@@ -61,14 +61,6 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    if (typeof Intl !== "undefined" && typeof Intl.DateTimeFormat === "function") {
-      try {
-        const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        if (timeZone) {
-          config.headers["X-Timezone"] = timeZone;
-        }
-      } catch {}
-    }
     return config;
   },
   (error) => {

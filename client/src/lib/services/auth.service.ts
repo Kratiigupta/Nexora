@@ -21,6 +21,15 @@ interface SignInData {
   password: string;
 }
 
+const getClientTimezone = (): string => {
+  if (typeof Intl !== "undefined" && typeof Intl.DateTimeFormat === "function") {
+    try {
+      return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+    } catch {}
+  }
+  return "UTC";
+};
+
 export const authService = {
   /**
    * Sign up with email/password → create Supabase user → create backend profile.
@@ -160,7 +169,9 @@ export const authService = {
     const maxRetries = 3;
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       try {
-        const response = await api.get("/auth/me");
+        const response = await api.get("/auth/me", {
+          params: { timezone: getClientTimezone() },
+        });
         return response.data.data;
       } catch (error: unknown) {
         const isLastAttempt = attempt === maxRetries - 1;

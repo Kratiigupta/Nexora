@@ -11,6 +11,15 @@ import type { DashboardData } from "@/types/dashboard";
  * then the resulting URL is sent to the backend via POST /profile/avatar or /profile/resume.
  * This reuses the same Supabase Storage upload pattern from authService.uploadAvatar().
  */
+const getClientTimezone = (): string => {
+  if (typeof Intl !== "undefined" && typeof Intl.DateTimeFormat === "function") {
+    try {
+      return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+    } catch {}
+  }
+  return "UTC";
+};
+
 export const profileService = {
   /**
    * GET /api/v1/profile — Fetch authenticated user's profile.
@@ -123,7 +132,9 @@ export const profileService = {
    * GET /api/v1/dashboard — Fetch dashboard data.
    */
   async getDashboard(): Promise<DashboardData> {
-    const response = await api.get("/dashboard");
+    const response = await api.get("/dashboard", {
+      params: { timezone: getClientTimezone() },
+    });
     return response.data.data;
   },
 
@@ -150,7 +161,9 @@ export const profileService = {
     message: string;
     date: string;
   }> {
-    const response = await api.post("/profile/checkin");
+    const response = await api.post("/profile/checkin", {
+      timezone: getClientTimezone(),
+    });
     return response.data.data;
   },
 
@@ -164,7 +177,9 @@ export const profileService = {
     longestStreak: number;
     date: string;
   }> {
-    const response = await api.get("/profile/checkin");
+    const response = await api.get("/profile/checkin", {
+      params: { timezone: getClientTimezone() },
+    });
     return response.data.data;
   },
 };
