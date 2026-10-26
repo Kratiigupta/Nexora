@@ -1,42 +1,18 @@
-import { Skeleton } from "@/components/ui/skeleton";
-
+/** Minimal loading — thin progress bar for instant render. */
 export default function SettingsLoading() {
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
-      {/* Header */}
-      <div className="space-y-1">
-        <Skeleton className="h-8 w-32" />
-        <Skeleton className="h-4 w-56" />
+    <div className="w-full">
+      <div className="h-0.5 w-full bg-muted overflow-hidden rounded-full">
+        <div className="h-full w-1/3 bg-primary rounded-full"
+          style={{ animation: "shimmer 1.2s ease-in-out infinite" }}
+        />
       </div>
-
-      {/* Settings sections */}
-      {Array.from({ length: 3 }).map((_, i) => (
-        <div
-          key={i}
-          className="rounded-xl border border-border/50 bg-card/80 p-6 space-y-5"
-        >
-          <div className="flex items-center gap-3">
-            <Skeleton className="h-5 w-5 rounded" />
-            <Skeleton className="h-5 w-36" />
-          </div>
-          <div className="space-y-4 pl-8">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <Skeleton className="h-4 w-28" />
-                <Skeleton className="h-3 w-48" />
-              </div>
-              <Skeleton className="h-9 w-32 rounded-md" />
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <Skeleton className="h-4 w-32" />
-                <Skeleton className="h-3 w-40" />
-              </div>
-              <Skeleton className="h-9 w-28 rounded-md" />
-            </div>
-          </div>
-        </div>
-      ))}
+      <style>{`
+        @keyframes shimmer {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(400%); }
+        }
+      `}</style>
     </div>
   );
 }

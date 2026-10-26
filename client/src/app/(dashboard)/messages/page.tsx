@@ -13,6 +13,9 @@ import { Conversation, Message } from "@/types/chat";
 import { Loader2, MessageSquarePlus, MessageSquareOff } from "lucide-react";
 import { toast } from "sonner";
 
+// In-memory module cache for instant (0ms) routing returns
+let cachedConversations: Conversation[] | null = null;
+
 function MessagesContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -21,8 +24,8 @@ function MessagesContent() {
   const { profile } = useAuthStore();
   const { socket, connect, isConnected } = useSocket();
 
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [conversations, setConversations] = useState<Conversation[]>(cachedConversations || []);
+  const [isLoading, setIsLoading] = useState(!cachedConversations);
   const [isNewChatOpen, setIsNewChatOpen] = useState(false);
 
   // Initialize Socket
@@ -32,8 +35,10 @@ function MessagesContent() {
 
   // Load conversations
   const loadConversations = useCallback(async () => {
+    if (!cachedConversations) setIsLoading(true);
     try {
       const data = await chatService.getConversations();
+      cachedConversations = data;
       setConversations(data);
     } catch {
       toast.error("Failed to load conversations");

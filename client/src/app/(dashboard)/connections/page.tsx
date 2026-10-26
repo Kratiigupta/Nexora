@@ -146,22 +146,30 @@ function SkeletonCards() {
  * Connections dashboard — view and manage all connections.
  * Tabs: Connected, Incoming Requests, Outgoing Requests.
  */
+// In-memory module cache for instant (0ms) routing returns
+let cachedConnections: AllConnectionsResponse | null = null;
+
 export default function ConnectionsPage() {
   const router = useRouter();
-  const [data, setData] = useState<AllConnectionsResponse | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [data, setData] = useState<AllConnectionsResponse | null>(cachedConnections);
+  const [isLoading, setIsLoading] = useState(!cachedConnections);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<Record<string, boolean>>({});
 
   const fetchConnections = useCallback(async () => {
-    setIsLoading(true);
+    if (!cachedConnections) {
+      setIsLoading(true);
+    }
     setError(null);
     try {
       const result = await connectionService.getAllConnections();
+      cachedConnections = result;
       setData(result);
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } } };
-      setError(e.response?.data?.message || "Failed to load connections.");
+      if (!cachedConnections) {
+        setError(e.response?.data?.message || "Failed to load connections.");
+      }
     } finally {
       setIsLoading(false);
     }

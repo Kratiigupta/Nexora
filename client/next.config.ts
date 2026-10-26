@@ -7,14 +7,19 @@ const nextConfig: NextConfig = {
     // Client-side router cache: reuse previously fetched page data
     // so revisiting pages (back/forward) is instant instead of refetching
     staleTimes: {
-      dynamic: 300, // 5 minutes for dynamic pages
-      static: 180,  // 3 minutes for static pages
+      dynamic: 600, // 10 minutes for dynamic pages — makes back/forward instant
+      static: 600,  // 10 minutes for static pages
     },
     optimizePackageImports: [
       "lucide-react",
       "@base-ui/react",
       "sonner",
       "zod",
+      "@supabase/supabase-js",
+      "axios",
+      "react-hook-form",
+      "zustand",
+      "socket.io-client",
     ],
   },
   images: {

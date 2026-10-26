@@ -34,17 +34,19 @@ import {
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
+// In-memory module cache for instant (0ms) routing returns
+let cachedDashboardData: DashboardData | null = null;
+
 export default function DashboardPage() {
   const router = useRouter();
   const { profile, isProfileLoading } = useAuthStore();
-  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(cachedDashboardData);
+  const [isLoading, setIsLoading] = useState(!cachedDashboardData);
   const [isCheckingIn, setIsCheckingIn] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const hasFetchedRef = useRef(false);
 
-  // Fetch dashboard data immediately — don't wait for profile to load.
-  // The API call uses the cached Supabase token directly.
+  // Fetch dashboard data immediately — revalidates silently in background if cached
   useEffect(() => {
     if (hasFetchedRef.current) return;
     hasFetchedRef.current = true;
@@ -52,10 +54,13 @@ export default function DashboardPage() {
     const fetchDashboard = async () => {
       try {
         const data = await profileService.getDashboard();
+        cachedDashboardData = data;
         setDashboardData(data);
       } catch (err) {
         console.error("Failed to fetch dashboard data:", err);
-        setError("Failed to load dashboard data. Please try again.");
+        if (!cachedDashboardData) {
+          setError("Failed to load dashboard data. Please try again.");
+        }
       } finally {
         setIsLoading(false);
       }

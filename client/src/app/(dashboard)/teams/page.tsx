@@ -14,28 +14,36 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { Team, TeamInvitation } from "@/types/team";
 
+// In-memory module cache for instant (0ms) routing returns
+let cachedTeams: Team[] | null = null;
+let cachedInvitations: TeamInvitation[] | null = null;
+
 export default function TeamsPage() {
-  const [teams, setTeams] = useState<Team[]>([]);
-  const [invitations, setInvitations] = useState<TeamInvitation[]>([]);
-  const [isLoadingTeams, setIsLoadingTeams] = useState(true);
-  const [isLoadingInvites, setIsLoadingInvites] = useState(true);
+  const [teams, setTeams] = useState<Team[]>(cachedTeams || []);
+  const [invitations, setInvitations] = useState<TeamInvitation[]>(cachedInvitations || []);
+  const [isLoadingTeams, setIsLoadingTeams] = useState(!cachedTeams);
+  const [isLoadingInvites, setIsLoadingInvites] = useState(!cachedInvitations);
   const [error, setError] = useState<string | null>(null);
   const [processingInvites, setProcessingInvites] = useState<Set<string>>(new Set());
 
   const fetchData = useCallback(async () => {
-    setIsLoadingTeams(true);
-    setIsLoadingInvites(true);
+    if (!cachedTeams) setIsLoadingTeams(true);
+    if (!cachedInvitations) setIsLoadingInvites(true);
     setError(null);
     try {
       const [teamsData, invitesData] = await Promise.all([
         teamService.getMyTeams(),
         teamService.getMyInvitations()
       ]);
+      cachedTeams = teamsData;
+      cachedInvitations = invitesData;
       setTeams(teamsData);
       setInvitations(invitesData);
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } } };
-      setError(e.response?.data?.message || "Failed to load teams data.");
+      if (!cachedTeams) {
+        setError(e.response?.data?.message || "Failed to load teams data.");
+      }
     } finally {
       setIsLoadingTeams(false);
       setIsLoadingInvites(false);

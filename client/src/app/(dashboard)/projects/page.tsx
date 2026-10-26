@@ -9,20 +9,28 @@ import { ProjectCard } from "@/components/project/ProjectCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CreateProjectDialog } from "@/components/project/CreateProjectDialog";
 
+// In-memory module cache for instant (0ms) routing returns
+let cachedProjects: Project[] | null = null;
+
 export default function ProjectsPage() {
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [projects, setProjects] = useState<Project[]>(cachedProjects || []);
+  const [isLoading, setIsLoading] = useState(!cachedProjects);
   const [error, setError] = useState<string | null>(null);
 
   const loadProjects = useCallback(async () => {
-    setIsLoading(true);
+    if (!cachedProjects) {
+      setIsLoading(true);
+    }
     setError(null);
     try {
       const data = await projectService.getMyProjects();
+      cachedProjects = data;
       setProjects(data);
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } } };
-      setError(e.response?.data?.message || "Failed to load projects. Please try again later.");
+      if (!cachedProjects) {
+        setError(e.response?.data?.message || "Failed to load projects. Please try again later.");
+      }
     } finally {
       setIsLoading(false);
     }

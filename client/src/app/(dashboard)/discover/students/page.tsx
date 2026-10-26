@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { Search, UserPlus, Users, GraduationCap, Star, Check, Clock, Loader2 } from "lucide-react";
 import { profileService } from "@/lib/services/profile.service";
 import {
@@ -45,10 +45,15 @@ function buildConnectionStatusMap(
   return map;
 }
 
+// In-memory module cache for instant (0ms) routing returns
+let cachedStudents: TeammateRecommendation[] | null = null;
+let cachedTotalCount = 0;
+let cachedStatusMap: Map<string, ConnectionStatus> = new Map();
+
 export default function DiscoverStudentsPage() {
   const { profile: myProfile } = useAuthStore();
-  const [students, setStudents] = useState<TeammateRecommendation[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [students, setStudents] = useState<TeammateRecommendation[]>(cachedStudents || []);
+  const [isLoading, setIsLoading] = useState(!cachedStudents);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
@@ -58,23 +63,26 @@ export default function DiscoverStudentsPage() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(false);
 
-  // Connection status map — derived once from a single API call
-  const [statusMap, setStatusMap] = useState<Map<string, ConnectionStatus>>(new Map());
+  // Connection status map — initialized from cache for 0ms render
+  const [statusMap, setStatusMap] = useState<Map<string, ConnectionStatus>>(cachedStatusMap);
   const [connectingIds, setConnectingIds] = useState<Set<string>>(new Set());
+  const [totalCount, setTotalCount] = useState(cachedTotalCount);
 
   const fetchConnections = useCallback(async () => {
     try {
       const connectionsData = await connectionService.getAllConnections();
-      setStatusMap(buildConnectionStatusMap(connectionsData));
+      const newMap = buildConnectionStatusMap(connectionsData);
+      cachedStatusMap = newMap;
+      setStatusMap(newMap);
     } catch (err) {
       console.error("Failed to load connections", err);
     }
   }, []);
 
   const fetchStudents = useCallback(async (currentPage: number, search: string, isLoadMore = false) => {
-    if (!isLoadMore) {
+    if (!isLoadMore && !cachedStudents) {
       setIsLoading(true);
-    } else {
+    } else if (isLoadMore) {
       setIsLoadingMore(true);
     }
     setError(null);
@@ -82,15 +90,22 @@ export default function DiscoverStudentsPage() {
       const data = await profileService.getRecommendedTeammates({
         search,
         page: currentPage,
-        limit: 20
+        limit: 50
       });
       
       if (isLoadMore) {
         setStudents((prev) => [...prev, ...data.users]);
       } else {
         setStudents(data.users);
+        if (!search && currentPage === 1) {
+          cachedStudents = data.users;
+          cachedTotalCount = data.pagination.total ?? data.users.length;
+        }
       }
       setHasMore(data.pagination.hasNextPage);
+      if (data.pagination.total !== undefined) {
+        setTotalCount(data.pagination.total);
+      }
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } } };
       setError(e.response?.data?.message || "Failed to load students.");
@@ -100,18 +115,24 @@ export default function DiscoverStudentsPage() {
     }
   }, []);
 
-  // Initial load of connections
+  // Initial load: fetch students and connections independently without blocking
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void fetchStudents(1, "", false);
     void fetchConnections();
-  }, [fetchConnections]);
+  }, [fetchStudents, fetchConnections]);
 
-  // Load students when search or page changes
+  // Reload students when search changes (but skip initial mount)
+  const isInitialMount = useRef(true);
   useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setPage(1);
     void fetchStudents(1, debouncedSearch, false);
   }, [debouncedSearch, fetchStudents]);
+
 
   const loadMore = () => {
     if (!hasMore || isLoadingMore) return;
@@ -230,7 +251,9 @@ export default function DiscoverStudentsPage() {
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Discover Students</h2>
           <p className="text-muted-foreground mt-1">
-            Find potential teammates and collaborators based on your skills and interests.
+            {totalCount > 0
+              ? `${totalCount} registered student${totalCount !== 1 ? 's' : ''} — find teammates and collaborators.`
+              : "Find potential teammates and collaborators based on your skills and interests."}
           </p>
         </div>
       </div>

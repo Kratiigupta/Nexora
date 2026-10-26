@@ -91,6 +91,7 @@ function SidebarContent({
       <div className="h-16 flex items-center px-6 border-b border-sidebar-border shrink-0">
         <Link
           href="/dashboard"
+          prefetch={true}
           className="flex items-center gap-2 group"
           onClick={onNavigate}
         >
@@ -113,6 +114,7 @@ function SidebarContent({
             <Link
               key={item.href}
               href={item.href}
+              prefetch={true}
               onClick={onNavigate}
               className={cn(
                 "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
@@ -205,6 +207,30 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       void fetchNotifications();
     }
   }, [profile, fetchNotifications]);
+
+  // Prefetch all main dashboard routes in the background for instant (0ms) routing
+  useEffect(() => {
+    const mainRoutes = [
+      "/dashboard",
+      "/profile",
+      "/discover/students",
+      "/connections",
+      "/teams",
+      "/projects",
+      "/messages",
+      "/events",
+      "/skill-exchange",
+      "/notifications",
+      "/settings",
+    ];
+    mainRoutes.forEach((route) => {
+      try {
+        router.prefetch(route);
+      } catch {
+        // Silently ignore prefetch errors
+      }
+    });
+  }, [router]);
 
   const handleBellMarkAsRead = async (id: string) => {
     try {

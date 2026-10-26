@@ -143,7 +143,7 @@ export const profileService = {
    */
   async getRecommendedTeammates(params?: { search?: string; page?: number; limit?: number }): Promise<{
     users: import("@/types/dashboard").TeammateRecommendation[];
-    pagination: { page: number; limit: number; hasNextPage: boolean };
+    pagination: { page: number; limit: number; total?: number; hasNextPage: boolean };
   }> {
     const response = await api.get("/dashboard/recommended-teammates", { params });
     return response.data.data;

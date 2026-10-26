@@ -16,6 +16,10 @@ import { toast } from "sonner";
 import { ArrowLeftRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 
+// In-memory module cache for instant (0ms) routing returns
+let cachedMentors: TeammateRecommendation[] | null = null;
+let cachedSessions: SkillExchangeSession[] | null = null;
+
 export default function SkillExchangePage() {
   const { profile } = useAuthStore();
   const router = useRouter();
@@ -23,12 +27,12 @@ export default function SkillExchangePage() {
   const [activeTab, setActiveTab] = useState("discover");
   
   // Data
-  const [mentors, setMentors] = useState<TeammateRecommendation[]>([]);
-  const [sessions, setSessions] = useState<SkillExchangeSession[]>([]);
+  const [mentors, setMentors] = useState<TeammateRecommendation[]>(cachedMentors || []);
+  const [sessions, setSessions] = useState<SkillExchangeSession[]>(cachedSessions || []);
   
   // Loading states
-  const [loadingMentors, setLoadingMentors] = useState(true);
-  const [loadingSessions, setLoadingSessions] = useState(true);
+  const [loadingMentors, setLoadingMentors] = useState(!cachedMentors);
+  const [loadingSessions, setLoadingSessions] = useState(!cachedSessions);
 
   // Dialogs
   const [requestMentor, setRequestMentor] = useState<string | null>(null);
@@ -37,9 +41,10 @@ export default function SkillExchangePage() {
   const [rateSessionId, setRateSessionId] = useState<string | null>(null);
 
   const fetchMentors = useCallback(async () => {
-    setLoadingMentors(true);
+    if (!cachedMentors) setLoadingMentors(true);
     try {
       const data = await profileService.getRecommendedTeammates();
+      cachedMentors = data.users;
       setMentors(data.users);
     } catch {
       toast.error("Failed to load mentors");
@@ -49,9 +54,10 @@ export default function SkillExchangePage() {
   }, []);
 
   const fetchSessions = useCallback(async () => {
-    setLoadingSessions(true);
+    if (!cachedSessions) setLoadingSessions(true);
     try {
       const data = await skillExchangeService.getSessions(1, 100);
+      cachedSessions = data.data;
       setSessions(data.data);
     } catch {
       toast.error("Failed to load sessions");

@@ -51,10 +51,10 @@ function getNotificationHref(notification: NotificationItem): string | null {
 
 export default function NotificationsPage() {
   const router = useRouter();
-  const { setNotifications, markAsRead, markAllAsRead } = useNotificationStore();
+  const { notifications: storeNotifications, setNotifications, markAsRead, markAllAsRead } = useNotificationStore();
 
-  const [notifications, setLocalNotifications] = useState<NotificationItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [notifications, setLocalNotifications] = useState<NotificationItem[]>(storeNotifications || []);
+  const [isLoading, setIsLoading] = useState(storeNotifications.length === 0);
   const [error, setError] = useState<string | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
@@ -66,7 +66,9 @@ export default function NotificationsPage() {
   const [totalPages, setTotalPages] = useState(1);
 
   const fetchNotifications = useCallback(async () => {
-    setIsLoading(true);
+    if (storeNotifications.length === 0) {
+      setIsLoading(true);
+    }
     setError(null);
     try {
       const { data, meta } = await notificationService.getNotifications({

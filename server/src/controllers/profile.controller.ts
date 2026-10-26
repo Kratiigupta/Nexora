@@ -541,7 +541,9 @@ export const getDashboard = async (
 
 /**
  * GET /api/v1/dashboard/recommended-teammates
- * Returns recommended teammates for the authenticated user based on a deterministic scoring algorithm.
+ * Returns ALL registered profiles for discovery.
+ * Profiles are scored by relevance (shared skills/dept/interests/year)
+ * so best matches appear first, but every registered user is visible.
  */
 export const getRecommendedTeammates = async (
   req: AuthenticatedRequest,
@@ -549,82 +551,76 @@ export const getRecommendedTeammates = async (
   next: NextFunction
 ): Promise<void> => {
   try {
-    const userId = req.user!.id;
+    const userId = req.user?.id;
 
     // Extract query parameters
     const search = req.query.search ? String(req.query.search).trim() : "";
     const page = Math.max(1, parseInt(req.query.page as string) || 1);
-    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string) || 20));
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 50));
+    const skip = (page - 1) * limit;
 
-    // Fetch current user's profile and skills with lean selection
-    const currentUser = await prisma.profile.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        department: true,
-        year: true,
-        interests: true,
-        skills: { select: { skillId: true } },
-      },
-    });
-
-    if (!currentUser) {
-      throw ApiError.notFound("Profile");
+    // Fetch current user's profile and skills with lean selection (if exists)
+    let currentUser = null;
+    if (userId) {
+      currentUser = await prisma.profile.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          department: true,
+          year: true,
+          interests: true,
+          skills: { select: { skillId: true } },
+        },
+      });
     }
 
-    const userSkillIds = currentUser.skills.map((s) => s.skillId);
+    const userSkillIds = currentUser?.skills ? currentUser.skills.map((s) => s.skillId) : [];
+    const userDept = currentUser?.department;
+    const userInterests = currentUser?.interests || [];
+    const userYear = currentUser?.year;
 
+    // Base filter: exclude only the current user — show ALL registered profiles
     const whereClause: any = {
-      id: { not: userId },
-      isAvailable: true,
+      ...(userId ? { id: { not: userId } } : {}),
     };
 
     if (search) {
-      // Use search conditions
+      // When searching, filter across name, username, department, college, bio, and skills
       whereClause.OR = [
         { fullName: { contains: search, mode: "insensitive" } },
         { username: { contains: search, mode: "insensitive" } },
         { department: { contains: search, mode: "insensitive" } },
+        { college: { contains: search, mode: "insensitive" } },
+        { bio: { contains: search, mode: "insensitive" } },
         { skills: { some: { skill: { name: { contains: search, mode: "insensitive" } } } } }
       ];
-    } else {
-      // Build efficient OR conditions to only fetch potentially relevant candidates
-      const orConditions: any[] = [];
-      if (currentUser.department) orConditions.push({ department: currentUser.department });
-      if (currentUser.year) orConditions.push({ year: currentUser.year });
-      if (currentUser.interests && currentUser.interests.length > 0) {
-        orConditions.push({ interests: { hasSome: currentUser.interests } });
-      }
-      if (userSkillIds.length > 0) {
-        orConditions.push({ skills: { some: { skillId: { in: userSkillIds } } } });
-      }
-
-      if (orConditions.length > 0) {
-        whereClause.OR = orConditions;
-      }
     }
 
-    // Fetch eligible candidates with lean field selection
-    const candidates = await prisma.profile.findMany({
-      where: whereClause,
-      select: {
-        id: true,
-        fullName: true,
-        username: true,
-        avatarUrl: true,
-        department: true,
-        year: true,
-        bio: true,
-        interests: true,
-        skills: {
-          select: {
-            skillId: true,
-            skill: { select: { name: true } },
+    // Run count + fetch in parallel for faster response
+    const [totalCount, candidates] = await Promise.all([
+      prisma.profile.count({ where: whereClause }),
+      prisma.profile.findMany({
+        where: whereClause,
+        select: {
+          id: true,
+          fullName: true,
+          username: true,
+          avatarUrl: true,
+          department: true,
+          year: true,
+          bio: true,
+          interests: true,
+          skills: {
+            select: {
+              skillId: true,
+              skill: { select: { name: true } },
+            },
           },
         },
-      },
-      take: 200,
-    });
+        orderBy: { createdAt: "desc" },
+        take: 2000,
+      }),
+    ]);
 
     // Score candidates deterministically
     const scoredCandidates = candidates.map(candidate => {
@@ -632,31 +628,35 @@ export const getRecommendedTeammates = async (
       const matchReasons: string[] = [];
 
       // 1. Shared skills: +15 per skill, max 45
-      const candidateSkillIds = candidate.skills.map(s => s.skillId);
-      const sharedSkills = candidateSkillIds.filter(id => userSkillIds.includes(id));
-      if (sharedSkills.length > 0) {
-        const points = Math.min(sharedSkills.length * 15, 45);
-        score += points;
-        matchReasons.push(`${sharedSkills.length} shared skill${sharedSkills.length > 1 ? 's' : ''}`);
+      if (userSkillIds.length > 0) {
+        const candidateSkillIds = candidate.skills.map(s => s.skillId);
+        const sharedSkills = candidateSkillIds.filter(id => userSkillIds.includes(id));
+        if (sharedSkills.length > 0) {
+          const points = Math.min(sharedSkills.length * 15, 45);
+          score += points;
+          matchReasons.push(`${sharedSkills.length} shared skill${sharedSkills.length > 1 ? 's' : ''}`);
+        }
       }
 
       // 2. Same department: +20
-      if (candidate.department === currentUser.department) {
+      if (userDept && candidate.department && candidate.department.toLowerCase() === userDept.toLowerCase()) {
         score += 20;
         matchReasons.push("Same department");
       }
 
       // 3. Shared interests: +10 per interest, max 20
-      const uniqueCandidateInterests = Array.from(new Set(candidate.interests));
-      const sharedInterests = uniqueCandidateInterests.filter(i => currentUser.interests.includes(i));
-      if (sharedInterests.length > 0) {
-        const points = Math.min(sharedInterests.length * 10, 20);
-        score += points;
-        matchReasons.push(`${sharedInterests.length} shared interest${sharedInterests.length > 1 ? 's' : ''}`);
+      if (userInterests.length > 0) {
+        const uniqueCandidateInterests = Array.from(new Set(candidate.interests || []));
+        const sharedInterests = uniqueCandidateInterests.filter(i => userInterests.includes(i));
+        if (sharedInterests.length > 0) {
+          const points = Math.min(sharedInterests.length * 10, 20);
+          score += points;
+          matchReasons.push(`${sharedInterests.length} shared interest${sharedInterests.length > 1 ? 's' : ''}`);
+        }
       }
 
       // 4. Same academic year: +15
-      if (candidate.year === currentUser.year) {
+      if (userYear && candidate.year === userYear) {
         score += 15;
         matchReasons.push("Same academic year");
       }
@@ -669,26 +669,25 @@ export const getRecommendedTeammates = async (
         department: candidate.department,
         year: candidate.year,
         bio: candidate.bio,
-        skills: candidate.skills.map(s => s.skill.name), // Format skills as strings for UI
+        skills: candidate.skills.map(s => s.skill.name),
         score,
         matchReasons
       };
     });
 
-    // Sort descending by score
-    scoredCandidates.sort((a, b) => b.score - a.score);
+    // Sort: highest scoring first, then alphabetically for ties
+    scoredCandidates.sort((a, b) => b.score - a.score || (a.fullName || "").localeCompare(b.fullName || ""));
 
-    // Paginate
-    const start = (page - 1) * limit;
-    const end = start + limit;
-    const paginatedUsers = scoredCandidates.slice(start, end);
-    const hasNextPage = end < scoredCandidates.length;
+    // Paginate from scored results
+    const paginatedUsers = scoredCandidates.slice(skip, skip + limit);
+    const hasNextPage = (skip + limit) < scoredCandidates.length;
 
     sendSuccess(res, {
       users: paginatedUsers,
       pagination: {
         page,
         limit,
+        total: totalCount,
         hasNextPage
       }
     });

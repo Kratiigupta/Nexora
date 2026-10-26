@@ -14,9 +14,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { useDebounce } from "@/hooks/useDebounce";
 
+// In-memory module cache for instant (0ms) routing returns
+let cachedEvents: Event[] | null = null;
+
 export default function EventsPage() {
-  const [events, setEvents] = useState<Event[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [events, setEvents] = useState<Event[]>(cachedEvents || []);
+  const [isLoading, setIsLoading] = useState(!cachedEvents);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedSearch = useDebounce(searchQuery, 300);
@@ -26,7 +29,9 @@ export default function EventsPage() {
   const [processingRsvps, setProcessingRsvps] = useState<Set<string>>(new Set());
 
   const fetchData = useCallback(async () => {
-    setIsLoading(true);
+    if (!cachedEvents && !debouncedSearch && !filterUpcoming && !filterType) {
+      setIsLoading(true);
+    }
     setError(null);
     try {
       const response = await eventService.getEvents({
@@ -34,10 +39,16 @@ export default function EventsPage() {
         upcoming: filterUpcoming || undefined,
         type: filterType || undefined,
       });
-      setEvents(response?.events || []);
+      const fetchedEvents = response?.events || [];
+      if (!debouncedSearch && !filterUpcoming && !filterType) {
+        cachedEvents = fetchedEvents;
+      }
+      setEvents(fetchedEvents);
     } catch (err: unknown) {
       const e = err as { response?: { data?: { message?: string } } };
-      setError(e.response?.data?.message || "Failed to load events.");
+      if (!cachedEvents) {
+        setError(e.response?.data?.message || "Failed to load events.");
+      }
     } finally {
       setIsLoading(false);
     }
