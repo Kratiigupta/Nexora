@@ -488,6 +488,12 @@ export const getDashboard = async (
         select: { createdAt: true },
       }),
 
+      // Daily checkins for user to guarantee check-in dates are in heatmap
+      prisma.dailyCheckin.findMany({
+        where: { userId },
+        select: { date: true },
+      }),
+
       // Check if user has already checked in today
       prisma.dailyCheckin.findUnique({
         where: {
@@ -510,6 +516,19 @@ export const getDashboard = async (
     for (const entry of heatmapData) {
       const dateStr = getCalendarDate(entry.createdAt, userTimezone);
       heatmap[dateStr] = (heatmap[dateStr] ?? 0) + 1;
+    }
+
+    // Ensure all check-in dates are counted as active (at least 1 activity)
+    for (const checkin of checkinRecords) {
+      heatmap[checkin.date] = Math.max(heatmap[checkin.date] ?? 0, 1);
+    }
+
+    // Ensure active login days are reflected in the heatmap
+    if (profile.lastLoginDate) {
+      heatmap[profile.lastLoginDate] = Math.max(heatmap[profile.lastLoginDate] ?? 0, 1);
+    }
+    if (todayCheckin) {
+      heatmap[todayStr] = Math.max(heatmap[todayStr] ?? 0, 1);
     }
 
     sendSuccess(res, {

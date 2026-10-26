@@ -73,13 +73,19 @@ export const profileService = {
     const supabase = createClient();
     const filePath = `avatars/${userId}/avatar.${fileExt}`;
 
-    const { error: uploadError } = await supabase.storage
+    const uploadPromise = supabase.storage
       .from("avatars")
       .upload(filePath, file, {
         cacheControl: "3600",
         upsert: true,
         contentType: file.type,
       });
+
+    const timeoutPromise = new Promise<{ data: null; error: Error }>((_, reject) =>
+      setTimeout(() => reject(new Error("Avatar upload timed out")), 10000)
+    );
+
+    const { error: uploadError } = await Promise.race([uploadPromise, timeoutPromise]);
 
     if (uploadError) throw uploadError;
 

@@ -30,21 +30,17 @@ const generateUsername = async (fullName: string, email: string): Promise<string
   }
 
   // Check if base username is available
-  const existing = await prisma.profile.findUnique({ where: { username: base } });
+  const existing = await prisma.profile.findUnique({ where: { username: base }, select: { id: true } });
   if (!existing) return base;
 
-  // Append random digits until unique
-  for (let i = 0; i < 10; i++) {
-    const suffix = Math.floor(Math.random() * 10000)
-      .toString()
-      .padStart(4, "0");
-    const candidate = `${base}${suffix}`;
-    const taken = await prisma.profile.findUnique({ where: { username: candidate } });
-    if (!taken) return candidate;
-  }
+  // Generate candidate with 4-digit random suffix (single query check)
+  const suffix = Math.floor(1000 + Math.random() * 9000);
+  const candidate = `${base.slice(0, 25)}${suffix}`;
+  const taken = await prisma.profile.findUnique({ where: { username: candidate }, select: { id: true } });
+  if (!taken) return candidate;
 
-  // Extremely unlikely fallback
-  return `${base}${Date.now()}`;
+  // Extremely unlikely fallback using timestamp slice
+  return `${base.slice(0, 20)}${Date.now().toString().slice(-6)}`;
 };
 
 /**
@@ -109,17 +105,7 @@ export const register = async (
 
       logger.info(`New profile created: ${username} (${supabaseId})`);
 
-      const userTimezone = resolveTimezone(
-        (req.headers["x-timezone"] as string) || (req.query.timezone as string)
-      );
-      await recordDailyLogin(supabaseId, userTimezone);
-
-      const refreshedProfile = await prisma.profile.findUnique({
-        where: { id: supabaseId },
-        include: { skills: { include: { skill: true } } },
-      });
-
-      sendSuccess(res, refreshedProfile || profile, 201);
+      sendSuccess(res, profile, 201);
     } catch (error: unknown) {
       // Gracefully handle concurrency race conditions if profile was inserted during our checks
       if (typeof error === "object" && error !== null && "code" in error && (error as { code?: string }).code === "P2002") {

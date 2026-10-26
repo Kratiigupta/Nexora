@@ -8,10 +8,10 @@ export const MONTHS = [
 
 export const getColor = (count: number): string => {
   if (count === 0) return "bg-muted/50";
-  if (count <= 2) return "bg-emerald-500/30 dark:bg-emerald-500/20";
-  if (count <= 4) return "bg-emerald-500/50 dark:bg-emerald-500/40";
-  if (count <= 6) return "bg-emerald-500/70 dark:bg-emerald-500/60";
-  return "bg-emerald-500 dark:bg-emerald-500/80";
+  if (count <= 2) return "bg-emerald-400 dark:bg-emerald-500";
+  if (count <= 4) return "bg-emerald-500 dark:bg-emerald-400";
+  if (count <= 6) return "bg-emerald-600 dark:bg-emerald-300";
+  return "bg-emerald-700 dark:bg-emerald-200";
 };
 
 export interface HeatmapGridResult {

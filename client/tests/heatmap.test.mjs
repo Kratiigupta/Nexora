@@ -8,14 +8,14 @@ import {
 
 test("getColor() maps activity counts to correct Tailwind theme classes", () => {
   assert.equal(getColor(0), "bg-muted/50");
-  assert.equal(getColor(1), "bg-emerald-500/30 dark:bg-emerald-500/20");
-  assert.equal(getColor(2), "bg-emerald-500/30 dark:bg-emerald-500/20");
-  assert.equal(getColor(3), "bg-emerald-500/50 dark:bg-emerald-500/40");
-  assert.equal(getColor(4), "bg-emerald-500/50 dark:bg-emerald-500/40");
-  assert.equal(getColor(5), "bg-emerald-500/70 dark:bg-emerald-500/60");
-  assert.equal(getColor(6), "bg-emerald-500/70 dark:bg-emerald-500/60");
-  assert.equal(getColor(7), "bg-emerald-500 dark:bg-emerald-500/80");
-  assert.equal(getColor(100), "bg-emerald-500 dark:bg-emerald-500/80");
+  assert.equal(getColor(1), "bg-emerald-400 dark:bg-emerald-500");
+  assert.equal(getColor(2), "bg-emerald-400 dark:bg-emerald-500");
+  assert.equal(getColor(3), "bg-emerald-500 dark:bg-emerald-400");
+  assert.equal(getColor(4), "bg-emerald-500 dark:bg-emerald-400");
+  assert.equal(getColor(5), "bg-emerald-600 dark:bg-emerald-300");
+  assert.equal(getColor(6), "bg-emerald-600 dark:bg-emerald-300");
+  assert.equal(getColor(7), "bg-emerald-700 dark:bg-emerald-200");
+  assert.equal(getColor(100), "bg-emerald-700 dark:bg-emerald-200");
 });
 
 test("generateHeatmapGrid() produces ~53 weeks with correct week structures", () => {

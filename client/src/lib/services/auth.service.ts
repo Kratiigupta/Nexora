@@ -58,9 +58,9 @@ export const authService = {
       throw new Error("Failed to create user account");
     }
 
-    // 2. Create profile in PostgreSQL via backend
+    // 2. Create profile in PostgreSQL via backend (with 5s timeout to prevent UI hang on cold starts)
     try {
-      await api.post("/auth/register", {
+      const registerPromise = api.post("/auth/register", {
         supabaseId: authData.user.id,
         email: data.email,
         fullName: data.fullName,
@@ -68,9 +68,13 @@ export const authService = {
         year: data.year,
         college: data.college || undefined,
       });
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Profile registration timed out")), 5000)
+      );
+      await Promise.race([registerPromise, timeoutPromise]);
     } catch (profileError: unknown) {
       // Profile creation failure is non-fatal — getMe will auto-create it
-      console.warn("Profile pre-creation failed, will auto-create on login:", profileError);
+      console.warn("Profile pre-creation timed out or failed, will auto-create on login:", profileError);
     }
 
     return authData;
@@ -242,13 +246,19 @@ export const authService = {
     const supabase = createClient();
     const filePath = `avatars/${userId}/avatar.${fileExt}`;
 
-    const { error: uploadError } = await supabase.storage
+    const uploadPromise = supabase.storage
       .from("avatars")
       .upload(filePath, file, {
         cacheControl: "3600",
         upsert: true,
         contentType: file.type,
       });
+
+    const timeoutPromise = new Promise<{ data: null; error: Error }>((_, reject) =>
+      setTimeout(() => reject(new Error("Avatar upload timed out")), 10000)
+    );
+
+    const { error: uploadError } = await Promise.race([uploadPromise, timeoutPromise]);
 
     if (uploadError) throw uploadError;
 
