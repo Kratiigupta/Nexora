@@ -82,7 +82,9 @@ export const updateSession = async (request: NextRequest) => {
     return NextResponse.next({ request });
   }
 
-  // 4. Real navigations — refresh the session via Supabase
+  // 4. Real navigations — verify session exists using getSession() (reads from cookie, NO network call).
+  //    getUser() was causing a 300-800ms network roundtrip to Supabase on every single page navigation.
+  //    The client-side AuthProvider handles token refresh, so middleware only needs to check session existence.
   let supabaseResponse = NextResponse.next({
     request,
   });
@@ -111,8 +113,9 @@ export const updateSession = async (request: NextRequest) => {
   );
 
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
+  const user = session?.user ?? null;
 
   if (isProtected && !user) {
     const url = request.nextUrl.clone();

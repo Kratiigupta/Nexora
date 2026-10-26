@@ -455,7 +455,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
         {/* Page content */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-muted/10">
-          <div className="mx-auto max-w-6xl animate-in fade-in duration-100" key={pathname}>
+          <div className="mx-auto max-w-6xl">
             {children}
           </div>
         </div>

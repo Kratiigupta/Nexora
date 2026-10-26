@@ -4,6 +4,12 @@ const nextConfig: NextConfig = {
   compress: true,
   poweredByHeader: false,
   experimental: {
+    // Client-side router cache: reuse previously fetched page data
+    // so revisiting pages (back/forward) is instant instead of refetching
+    staleTimes: {
+      dynamic: 300, // 5 minutes for dynamic pages
+      static: 180,  // 3 minutes for static pages
+    },
     optimizePackageImports: [
       "lucide-react",
       "@base-ui/react",

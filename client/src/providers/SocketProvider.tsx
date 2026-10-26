@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, ReactNode } from "react";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuthStore } from "@/stores/authStore";
 import { useSocket } from "@/hooks/useSocket";
 import { useNotificationStore } from "@/stores/notificationStore";
 import { useChatStore } from "@/stores/chatStore";
@@ -10,9 +10,12 @@ import type { Message } from "@/types/chat";
 /**
  * SocketProvider — establishes Socket.IO connection for authenticated users.
  * Listens for real-time notifications and chat messages.
+ *
+ * Uses the Zustand auth store directly instead of useAuth hook to avoid
+ * creating a duplicate Supabase auth subscription + getSession() call.
  */
 export function SocketProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
+  const user = useAuthStore((s) => s.user);
   const { socket, connect, disconnect } = useSocket();
   const { addNotification } = useNotificationStore();
   const { addMessage, setOnlineUsers, addOnlineUser, removeOnlineUser } = useChatStore();
