@@ -89,14 +89,16 @@ export function EditProjectDialog({ project, onSuccess, trigger }: EditProjectDi
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <div onClick={() => setOpen(true)} className="inline-block">
-        {trigger || (
-          <Button variant="outline" size="sm" className="gap-2">
-            <Edit2 className="h-4 w-4" />
-            Edit Project
-          </Button>
-        )}
-      </div>
+      {trigger ? (
+        <span onClick={() => setOpen(true)} className="inline-block cursor-pointer">
+          {trigger}
+        </span>
+      ) : (
+        <Button onClick={() => setOpen(true)} variant="outline" size="sm" className="gap-2">
+          <Edit2 className="h-4 w-4" />
+          Edit Project
+        </Button>
+      )}
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Edit Project</DialogTitle>

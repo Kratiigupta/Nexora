@@ -140,14 +140,16 @@ export function CreateProjectDialog({ onSuccess, trigger, defaultTeamId }: Creat
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <div onClick={() => setOpen(true)} className="inline-block">
-        {trigger || (
-          <Button className="gap-2">
-            <FolderKanban className="h-4 w-4" />
-            Create Project
-          </Button>
-        )}
-      </div>
+      {trigger ? (
+        <span onClick={() => setOpen(true)} className="inline-block cursor-pointer">
+          {trigger}
+        </span>
+      ) : (
+        <Button onClick={() => setOpen(true)} className="gap-2">
+          <FolderKanban className="h-4 w-4" />
+          Create Project
+        </Button>
+      )}
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Create a New Project</DialogTitle>

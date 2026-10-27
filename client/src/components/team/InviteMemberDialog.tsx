@@ -71,14 +71,16 @@ export function InviteMemberDialog({ teamId, trigger, onInviteSuccess }: InviteM
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <div onClick={() => setOpen(true)} className="inline-block">
-        {trigger || (
-          <Button variant="outline" size="sm" className="gap-2">
-            <UserPlus className="h-4 w-4" />
-            Invite Members
-          </Button>
-        )}
-      </div>
+      {trigger ? (
+        <span onClick={() => setOpen(true)} className="inline-block cursor-pointer">
+          {trigger}
+        </span>
+      ) : (
+        <Button onClick={() => setOpen(true)} variant="outline" size="sm" className="gap-2">
+          <UserPlus className="h-4 w-4" />
+          Invite Members
+        </Button>
+      )}
       <DialogContent className="sm:max-w-[600px] max-h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Invite Members</DialogTitle>

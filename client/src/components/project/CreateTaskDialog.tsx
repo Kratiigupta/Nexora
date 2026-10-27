@@ -159,14 +159,16 @@ export function CreateTaskDialog({ project, onSuccess, trigger, initialStatus = 
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <div onClick={() => setOpen(true)} className="inline-block">
-        {trigger || (
-          <Button size="sm" className="gap-1">
-            <Plus className="h-4 w-4" />
-            Add Task
-          </Button>
-        )}
-      </div>
+      {trigger ? (
+        <span onClick={() => setOpen(true)} className="inline-block cursor-pointer">
+          {trigger}
+        </span>
+      ) : (
+        <Button onClick={() => setOpen(true)} size="sm" className="gap-1">
+          <Plus className="h-4 w-4" />
+          Add Task
+        </Button>
+      )}
       <DialogContent className="sm:max-w-[450px]">
         <DialogHeader>
           <DialogTitle>{taskToEdit ? "Edit Task" : "Create Task"}</DialogTitle>

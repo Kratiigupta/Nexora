@@ -108,14 +108,16 @@ export function CreateTeamDialog({ onSuccess, trigger }: CreateTeamDialogProps) 
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <div onClick={() => setOpen(true)} className="inline-block">
-        {trigger || (
-          <Button className="gap-2">
-            <Users className="h-4 w-4" />
-            Create Team
-          </Button>
-        )}
-      </div>
+      {trigger ? (
+        <span onClick={() => setOpen(true)} className="inline-block cursor-pointer">
+          {trigger}
+        </span>
+      ) : (
+        <Button onClick={() => setOpen(true)} className="gap-2">
+          <Users className="h-4 w-4" />
+          Create Team
+        </Button>
+      )}
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Create a New Team</DialogTitle>

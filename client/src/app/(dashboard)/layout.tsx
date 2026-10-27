@@ -117,7 +117,7 @@ function SidebarContent({
               prefetch={true}
               onClick={onNavigate}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
+                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-75 cursor-pointer touch-manipulation active:scale-[0.98]",
                 active
                   ? "bg-sidebar-primary/10 text-sidebar-primary shadow-sm"
                   : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
