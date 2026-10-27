@@ -56,10 +56,19 @@ export default function DashboardPage() {
         const data = await profileService.getDashboard();
         cachedDashboardData = data;
         setDashboardData(data);
-      } catch (err) {
+      } catch (err: unknown) {
         console.error("Failed to fetch dashboard data:", err);
         if (!cachedDashboardData) {
-          setError("Failed to load dashboard data. Please try again.");
+          const isTimeout =
+            err instanceof Error &&
+            (err.message?.includes("timeout") ||
+              (err as any)?.code === "ECONNABORTED" ||
+              (err as any)?.code === "ERR_NETWORK");
+          setError(
+            isTimeout
+              ? "The server took longer than expected to wake up. Please click retry."
+              : "Failed to load dashboard data. Please try again."
+          );
         }
       } finally {
         setIsLoading(false);
@@ -74,10 +83,20 @@ export default function DashboardPage() {
     setError(null);
     try {
       const data = await profileService.getDashboard();
+      cachedDashboardData = data;
       setDashboardData(data);
-    } catch (err) {
-      console.error("Failed to fetch dashboard data:", err);
-      setError("Failed to load dashboard data. Please try again.");
+    } catch (err: unknown) {
+      console.error("Failed to fetch dashboard data on retry:", err);
+      const isTimeout =
+        err instanceof Error &&
+        (err.message?.includes("timeout") ||
+          (err as any)?.code === "ECONNABORTED" ||
+          (err as any)?.code === "ERR_NETWORK");
+      setError(
+        isTimeout
+          ? "The server is still starting up. Please wait a few seconds and retry."
+          : "Failed to load dashboard data. Please try again."
+      );
     } finally {
       setIsLoading(false);
     }

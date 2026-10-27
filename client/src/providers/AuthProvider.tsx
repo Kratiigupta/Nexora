@@ -28,6 +28,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isMountedRef.current = true;
     const supabase = createClient();
 
+    // Trigger non-blocking wake-up ping to spin up Render container immediately if dormant
+    const apiBase = process.env.NEXT_PUBLIC_API_URL?.replace(/\/api\/v1\/?$/, "");
+    if (apiBase && !apiBase.includes("localhost")) {
+      fetch(`${apiBase}/health`, { method: "GET", cache: "no-store" }).catch(() => {});
+    }
+
     const fetchUserProfile = async (userId: string, force = false) => {
       // Deduplicate simultaneous API calls (e.g., initial getSession + immediate onAuthStateChange)
       if (!force && lastFetchedUserIdRef.current === userId) {

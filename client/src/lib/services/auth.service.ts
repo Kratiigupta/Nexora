@@ -179,12 +179,13 @@ export const authService = {
         return response.data.data;
       } catch (error: unknown) {
         const isLastAttempt = attempt === maxRetries - 1;
-        // Only retry on timeout or network errors, not on 4xx/5xx
         const isRetryable =
           error instanceof Error &&
-          "code" in error &&
-          ((error as { code: string }).code === "ECONNABORTED" ||
-            (error as { code: string }).code === "ERR_NETWORK");
+          (("code" in error &&
+            ((error as { code: string }).code === "ECONNABORTED" ||
+              (error as { code: string }).code === "ERR_NETWORK")) ||
+            error.message?.includes("timeout") ||
+            error.message?.includes("Network Error"));
 
         if (isLastAttempt || !isRetryable) {
           throw error;

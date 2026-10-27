@@ -13,7 +13,7 @@ const api = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
-  timeout: 15000,
+  timeout: 45000,
 });
 
 // ── Token caching ────────────────────────────────────
@@ -68,10 +68,31 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor — handle common errors
+// Response interceptor — handle common errors & cold start retries
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
+    const config = error.config;
+
+    // Retry idempotent GET requests on cold-start timeout or network errors
+    const isTimeoutOrNetwork =
+      error.code === "ECONNABORTED" ||
+      error.code === "ERR_NETWORK" ||
+      error.message?.includes("timeout");
+
+    if (config && config.method?.toLowerCase() === "get" && isTimeoutOrNetwork) {
+      (config as any).__retryCount = ((config as any).__retryCount || 0) + 1;
+      const MAX_RETRIES = 2;
+      if ((config as any).__retryCount <= MAX_RETRIES) {
+        const delay = (config as any).__retryCount * 2000;
+        console.warn(
+          `[API] Retrying GET ${config.url} (attempt ${(config as any).__retryCount}/${MAX_RETRIES}) after ${delay}ms...`
+        );
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        return api.request(config);
+      }
+    }
+
     // Handle 401 — session expired
     if (error.response?.status === 401) {
       // Clear cached token so the next request fetches a fresh one

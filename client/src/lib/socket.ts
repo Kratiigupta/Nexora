@@ -64,7 +64,7 @@ export const getSocket = async (): Promise<Socket> => {
         clearInterval(check);
         if (socket) resolve(socket);
         else reject(new Error("Socket connection timed out"));
-      }, 10000);
+      }, 45000);
     });
   }
 
@@ -83,13 +83,13 @@ export const getSocket = async (): Promise<Socket> => {
       auth: {
         token,
       },
-      transports: ["websocket"],
-      upgrade: false,
+      transports: ["polling", "websocket"],
+      upgrade: true,
       reconnection: true,
-      reconnectionAttempts: 5,
+      reconnectionAttempts: 10,
       reconnectionDelay: 2000,
       reconnectionDelayMax: 10000,
-      timeout: 20000,
+      timeout: 45000,
     });
 
     socket = newSocket;
