@@ -1,6 +1,7 @@
 import api from "../api";
 import type { 
   Conversation, 
+  Message,
   PaginatedMessages, 
   CreateConversationPayload, 
   SendMessagePayload 
@@ -29,8 +30,9 @@ export const chatService = {
     return response.data.data;
   },
 
-  sendMessage: async (id: string, payload: SendMessagePayload): Promise<void> => {
-    await api.post(`/chat/conversations/${id}/messages`, payload);
+  sendMessage: async (id: string, payload: SendMessagePayload): Promise<Message> => {
+    const response = await api.post(`/chat/conversations/${id}/messages`, payload);
+    return response.data.data;
   },
 
   markAsRead: async (id: string): Promise<void> => {

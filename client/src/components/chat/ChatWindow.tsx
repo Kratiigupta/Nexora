@@ -23,8 +23,15 @@ export function ChatWindow({
   conversationType,
 }: ChatWindowProps) {
   const { profile } = useAuthStore();
-  const { socket, isConnected } = useSocket();
+  const { socket, isConnected, connect } = useSocket();
   const currentUserId = profile?.id;
+
+  // Ensure socket is connected
+  useEffect(() => {
+    if (!socket) {
+      connect();
+    }
+  }, [socket, connect]);
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -91,10 +98,17 @@ export function ChatWindow({
 
   // Socket setup
   useEffect(() => {
-    if (!socket || !isConnected) return;
+    if (!socket) return;
 
-    // Join room
-    socket.emit("join_room", conversationId);
+    const joinRoom = () => {
+      socket.emit("join_room", conversationId);
+    };
+
+    if (socket.connected || isConnected) {
+      joinRoom();
+    }
+
+    socket.on("connect", joinRoom);
 
     const handleNewMessage = (newMessage: Message) => {
       if (newMessage.conversationId !== conversationId) return;
@@ -148,6 +162,7 @@ export function ChatWindow({
 
     return () => {
       socket.emit("leave_room", conversationId);
+      socket.off("connect", joinRoom);
       socket.off("new_message", handleNewMessage);
       socket.off("typing_start", handleTypingStart);
       socket.off("typing_stop", handleTypingStop);
@@ -169,12 +184,19 @@ export function ChatWindow({
 
   const handleSendMessage = async (content: string) => {
     try {
-      await chatService.sendMessage(conversationId, {
+      const sentMessage = await chatService.sendMessage(conversationId, {
         content,
-        type: "text"
+        type: "text",
       });
-      // The socket will deliver the message to us, triggering handleNewMessage
-      // Typing stop is handled by ChatInput internally when sending
+
+      // Immediately append sent message to chat window
+      if (sentMessage) {
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === sentMessage.id)) return prev;
+          return [...prev, sentMessage];
+        });
+        setTimeout(scrollToBottom, 50);
+      }
     } catch (error) {
       const err = error as { response?: { data?: { message?: string } } };
       toast.error(err.response?.data?.message || "Failed to send message");

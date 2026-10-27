@@ -1,24 +1,49 @@
 "use client";
 
-import { useEffect, ReactNode } from "react";
+import { useEffect, useState, useCallback, useRef, ReactNode } from "react";
+import { Socket } from "socket.io-client";
+import { getSocket, disconnectSocket } from "@/lib/socket";
+import { SocketContext } from "@/hooks/useSocket";
 import { useAuthStore } from "@/stores/authStore";
-import { useSocket } from "@/hooks/useSocket";
 import { useNotificationStore } from "@/stores/notificationStore";
 import { useChatStore } from "@/stores/chatStore";
 import type { Message } from "@/types/chat";
 
 /**
  * SocketProvider — establishes Socket.IO connection for authenticated users.
- * Listens for real-time notifications and chat messages.
- *
- * Uses the Zustand auth store directly instead of useAuth hook to avoid
- * creating a duplicate Supabase auth subscription + getSession() call.
+ * Provides the shared socket instance through SocketContext and listens for
+ * real-time notifications and chat messages.
  */
 export function SocketProvider({ children }: { children: ReactNode }) {
   const user = useAuthStore((s) => s.user);
-  const { socket, connect, disconnect } = useSocket();
+  const [socket, setSocket] = useState<Socket | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
+  const socketRef = useRef<Socket | null>(null);
+
   const { addNotification } = useNotificationStore();
   const { addMessage, setOnlineUsers, addOnlineUser, removeOnlineUser } = useChatStore();
+
+  const connect = useCallback(async () => {
+    try {
+      const newSocket = await getSocket();
+      if (socketRef.current !== newSocket) {
+        socketRef.current = newSocket;
+        setSocket(newSocket);
+        setIsConnected(newSocket.connected);
+      } else if (!newSocket.connected) {
+        newSocket.connect();
+      }
+    } catch (error) {
+      console.error("Failed to connect socket:", error);
+    }
+  }, []);
+
+  const disconnect = useCallback(() => {
+    socketRef.current = null;
+    disconnectSocket();
+    setSocket(null);
+    setIsConnected(false);
+  }, []);
 
   useEffect(() => {
     if (user) {
@@ -26,13 +51,29 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     } else {
       disconnect();
     }
-
-    return () => {
-      // Don't disconnect on cleanup — let the auth state change handle it
-    };
   }, [user, connect, disconnect]);
 
-  // Set up event listeners
+  // Connection state listeners
+  useEffect(() => {
+    if (!socket) return;
+
+    const onConnect = () => setIsConnected(true);
+    const onDisconnect = () => setIsConnected(false);
+
+    if (socket.connected) {
+      setIsConnected(true);
+    }
+
+    socket.on("connect", onConnect);
+    socket.on("disconnect", onDisconnect);
+
+    return () => {
+      socket.off("connect", onConnect);
+      socket.off("disconnect", onDisconnect);
+    };
+  }, [socket]);
+
+  // Global event listeners
   useEffect(() => {
     if (!socket) return;
 
@@ -68,5 +109,9 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     };
   }, [socket, addNotification, addMessage, setOnlineUsers, addOnlineUser, removeOnlineUser]);
 
-  return <>{children}</>;
+  return (
+    <SocketContext.Provider value={{ socket, isConnected, connect, disconnect }}>
+      {children}
+    </SocketContext.Provider>
+  );
 }

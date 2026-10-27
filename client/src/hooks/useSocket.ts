@@ -1,17 +1,30 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, createContext, useContext } from "react";
 import { Socket } from "socket.io-client";
 import { getSocket, disconnectSocket } from "@/lib/socket";
 
+export interface SocketContextType {
+  socket: Socket | null;
+  isConnected: boolean;
+  connect: () => Promise<void>;
+  disconnect: () => void;
+}
+
+export const SocketContext = createContext<SocketContextType | null>(null);
+
 /**
  * Custom hook for Socket.IO connection management.
- * Handles connection lifecycle and provides the socket instance.
- *
- * Listeners for connect/disconnect are registered once per socket instance
- * and cleaned up properly to prevent accumulation.
+ * Returns the shared SocketContext from SocketProvider if present,
+ * or safely initializes and connects the singleton socket if used outside.
  */
-export const useSocket = () => {
+export const useSocket = (): SocketContextType => {
+  const context = useContext(SocketContext);
+  if (context) {
+    return context;
+  }
+
+  // Fallback for standalone usage outside SocketProvider:
   const [isConnected, setIsConnected] = useState(false);
   const [socket, setSocket] = useState<Socket | null>(null);
   const socketRef = useRef<Socket | null>(null);
@@ -19,13 +32,11 @@ export const useSocket = () => {
   const connect = useCallback(async () => {
     try {
       const newSocket = await getSocket();
-      // Only update state if we got a new/different socket instance
       if (socketRef.current !== newSocket) {
         socketRef.current = newSocket;
         setSocket(newSocket);
         setIsConnected(newSocket.connected);
       } else if (!newSocket.connected) {
-        // Same socket, just reconnect if disconnected
         newSocket.connect();
       }
     } catch (error) {
@@ -40,12 +51,19 @@ export const useSocket = () => {
     setIsConnected(false);
   }, []);
 
-  // Register connect/disconnect listeners once per socket instance
+  useEffect(() => {
+    connect();
+  }, [connect]);
+
   useEffect(() => {
     if (!socket) return;
 
     const onConnect = () => setIsConnected(true);
     const onDisconnect = () => setIsConnected(false);
+
+    if (socket.connected) {
+      setIsConnected(true);
+    }
 
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
